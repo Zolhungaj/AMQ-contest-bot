@@ -29,43 +29,43 @@ def base_36_to_int(input):
     return res
 
 
-def int_to_season(in):
-    if in == 0:
+def int_to_season(input):
+    if input == 0:
         return "Winter"
-    elif in == 1:
+    elif input == 1:
         return "Spring"
-    elif in == 2:
+    elif input == 2:
         return "Summer"
-    elif in == 3:
+    elif input == 3:
         return "Fall"
 
 
-def season_to_int(in):
-    if in.lower() == "winter":
+def season_to_int(input):
+    if input.lower() == "winter":
         return 0
-    elif in.lower() == "spring":
+    elif input.lower() == "spring":
         return 1
-    elif in.lower() == "summer":
+    elif input.lower() == "summer":
         return 2
-    elif in.lower() == "fall":
+    elif input.lower() == "fall":
         return 3
 
 
-def int_to_query(in):
-    if in == 1:
+def int_to_query(input):
+    if input == 1:
         return "Included"
-    elif in == 2:
+    elif input == 2:
         return "Excluded"
-    elif in == 3:
+    elif input == 3:
         return "Optional"
 
 
-def query_to_int(in):
-    if in.lower() == "included":
+def query_to_int(input):
+    if input.lower() == "included":
         return 1
-    elif in.lower() == "excluded":
+    elif input.lower() == "excluded":
         return 2
-    elif in.lower() == "optional":
+    elif input.lower() == "optional":
         return 3
 
 
@@ -371,7 +371,7 @@ def create_code(player_count, song_count,
 
 def code_to_file(code, filename):
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(code_to_text)
+        f.write(code_to_text(code))
 
 
 def code_to_text(code):
@@ -381,7 +381,7 @@ def code_to_text(code):
     pos += 1
     lines.append("Player count: %d" % base_36_to_int(code[pos]))
     pos += 1
-    lines.append("Song count: %d" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Song count: %d" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Skip guess: %s" % code[pos])
     pos += 1
@@ -395,11 +395,11 @@ def code_to_text(code):
     pos += 1
     lines.append("Song selection simple: %s" % code[pos])
     pos += 1
-    lines.append("Selection watched: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Selection watched: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Selection unwatched: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Selection unwatched: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Selection random: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Selection random: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Type advanced: %s" % code[pos])
     pos += 1
@@ -409,33 +409,33 @@ def code_to_text(code):
     pos += 1
     lines.append("Type insert: %s" % code[pos])
     pos += 1
-    lines.append("Openings: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Openings: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Endings: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Endings: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Inserts: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Inserts: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Type random: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Type random: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Random time: %s" % code[pos])
     pos += 1
-    lines.append("Guess time: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Guess time: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Guess time low: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Guess time low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Guess time high: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Guess time high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Random sample: %s" % code[pos])
     pos += 1
-    lines.append("Sample point: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Sample point: %s" % base_36_to_int(code[pos]))
+    pos += 1
+    lines.append("Sample point low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Sample point low: %s" % base_36_to_int(code[pos:pos+1]))
-    pos += 2
-    lines.append("Sample point high: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Sample point high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Random speed: %s" % code[pos])
     pos += 1
-    lines.append("Const speed: %s" % code[pos])
+    lines.append("Const speed: %s" % base_36_to_int(code[pos]))
     pos += 1
     lines.append("Random speed 1: %s" % code[pos])
     pos += 1
@@ -453,9 +453,9 @@ def code_to_text(code):
     pos += 1
     lines.append("hard: %s" % code[pos])
     pos += 1
-    lines.append("Difficulty low: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Difficulty low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Difficulty high: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Difficulty high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Popularity advanced: %s" % code[pos])
     pos += 1
@@ -465,9 +465,9 @@ def code_to_text(code):
     pos += 1
     lines.append("Liked: %s" % code[pos])
     pos += 1
-    lines.append("Popularity low: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Popularity low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Popularity high: %s" % base_36_to_int(code[pos:pos+1]))
+    lines.append("Popularity high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Player score advanced: %s" % code[pos])
     pos += 1
@@ -497,10 +497,10 @@ def code_to_text(code):
     pos += 1
     lines.append("Anime score advanced: %s" % code[pos])
     pos += 1
-    lines.append("Anime score low: %s" % base_36_to_int(code[pos:pos+1]))
-    pos += 2
-    lines.append("Anime score high: %s" % base_36_to_int(code[pos:pos+1]))
-    pos += 2
+    lines.append("Anime score low: %s" % base_36_to_int(code[pos]))
+    pos += 1
+    lines.append("Anime score high: %s" % base_36_to_int(code[pos]))
+    pos += 1
     lines.append("Anime score 2: %s" % code[pos])
     pos += 1
     lines.append("Anime score 3: %s" % code[pos])
@@ -521,13 +521,13 @@ def code_to_text(code):
     pos += 1
     lines.append("Year ranges{")
     while code[pos] != "-":
-        year_start = base_36_to_int(code[pos:pos+2])
+        year_start = base_36_to_int(code[pos:pos+3])
         pos += 3
-        year_end = base_36_to_int(code[pos:pos+2])
+        year_end = base_36_to_int(code[pos:pos+3])
         pos += 3
-        season_start = int_to_season(code[pos])
+        season_start = int_to_season(base_36_to_int(code[pos]))
         pos += 1
-        season_end = int_to_season(code[pos])
+        season_end = int_to_season(base_36_to_int(code[pos]))
         pos += 1
         lines.append("%s %d %s %d" % (season_start, year_start,
                                       season_end, year_end)
@@ -546,18 +546,18 @@ def code_to_text(code):
     pos += 1
     lines.append("Genres{")
     while code[pos] != "-":
-        genre_id = base_36_to_int(code[pos:pos+1])
+        genre_id = base_36_to_int(code[pos:pos+2])
         pos += 2
-        query = int_to_query(code[pos])
+        query = int_to_query(base_36_to_int(code[pos]))
         pos += 1
         lines.append("%d %s" % (genre_id, query))
     lines.append("}")
     pos += 1
     lines.append("Tags{")
     while code[pos] != "-":
-        tag_id = base_36_to_int(code[pos:pos+1])
+        tag_id = base_36_to_int(code[pos:pos+2])
         pos += 2
-        query = int_to_query(code[pos])
+        query = int_to_query(base_36_to_int(code[pos]))
         pos += 1
         lines.append("%d %s" % (tag_id, query))
     lines.append("}")
