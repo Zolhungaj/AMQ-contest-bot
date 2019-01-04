@@ -5,6 +5,7 @@ import os
 import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 import time
 import _thread
 import subprocess
@@ -80,18 +81,21 @@ def main():
     load_confirm.click()
     time.sleep(2)
     if room_password != "":
-        # private_button = driver.find_element_by_id("mhPrivateRoom")
-        private_button = driver.find_element_by_class_name("customCheckbox")
-        private_button.click()
+        private_button = driver.find_element_by_id("mhPrivateRoom")
+        box = driver.find_element_by_class_name("customCheckbox")
+        actions = ActionChains(driver)
+        actions.move_to_element(box)
+        actions.click(private_button)
+        actions.perform()
         time.sleep(2)
-        room_password_input = driver.find_element_by_id("mhPasswordContainer")
+        room_password_input = driver.find_element_by_id("mhPasswordInput")
         room_password_input.send_keys(room_password)
     room_name_input = driver.find_element_by_id("mhRoomNameInput")
     room_name_input.send_keys(room_name)
     start_room = driver.find_element_by_id("mhHostButton")
     start_room.click()
     # lobby.viewSettings();
-    # gcInput
+    # lbStartButton
     # gcMessageContainer
     # lobbyAvatar3
     # <h3 class="lobbyAvatarLevel">-1</h3>
@@ -100,6 +104,7 @@ def main():
     # gcQueueCount
     # videoUrl = videoPreview.get_attribute("src")
     chat(driver, "Hello World!")
+    state = 0  # 0: lobby
     while True:
         # program loop
         break
