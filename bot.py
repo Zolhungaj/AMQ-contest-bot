@@ -36,7 +36,8 @@ def main():
     """
     log("AMQ-automator started")
     with open("default.config") as f:
-        config = f.readlines()
+        config = f.read()
+        config = config.split("\n")
     code = config[0]
     geckodriver_path = config[1]
     username = config[2]
@@ -51,35 +52,53 @@ def main():
     password_input.send_keys(password)
     login_button = driver.find_element_by_id("loginButton")
     login_button.click()
+    time.sleep(2)
     play = driver.find_element_by_id("mpPlayButton")
     play.click()
+    time.sleep(2)
     host = driver.find_element_by_id("roomBrowserHostButton")
     host.click()
+    time.sleep(2)
     driver.execute_script("hostModal.selectStandard();")
-    driver.execute_script("hostModal.selectQD();")
+    # driver.execute_script("hostModal.selectQD();")
+    time.sleep(2)
     driver.execute_script("hostModal.toggleLoadContainer();")
+    time.sleep(2)
     load = driver.find_element_by_id("mhLoadFromSaveCodeButton")
     load.click()
+    time.sleep(2)
     load_code_entry = driver.find_element_by_class_name("swal2-input")
     load_code_entry.send_keys(code)
     load_confirm = driver.find_element_by_class_name(
-        "swal2-confirm swal2-styled")
+        "swal2-confirm")
     load_confirm.click()
-    room_name_input = driver.find_element_by_id("mhRoomNameInput")
-    room_name_input.send_keys("")
+    time.sleep(2)
     if room_password != "":
-        private_button = driver.find_element_by_id("mhPrivateRoom")
+        # private_button = driver.find_element_by_id("mhPrivateRoom")
+        private_button = driver.find_element_by_class_name("customCheckbox")
         private_button.click()
+        time.sleep(2)
         room_password_input = driver.find_element_by_id("mhPasswordContainer")
         room_password_input.send_keys(room_password)
-        driver.find_element_by_class_name
-    videoUrl = videoPreview.get_attribute("src")
+    room_name_input = driver.find_element_by_id("mhRoomNameInput")
+    room_name_input.send_keys(room_name)
+    start_room = driver.find_element_by_id("mhHostButton")
+    start_room.click()
+    # lobby.viewSettings();
+    # gcInput
+    # gcMessageContainer
+    # lobbyAvatar3
+    # <h3 class="lobbyAvatarLevel">-1</h3>
+    # gcQueueList
+    # gameChat.viewQueue();
+    # gcQueueCount
+    # videoUrl = videoPreview.get_attribute("src")
     while True:
         break
         submit.click()
     log("program closed normally")
-    logfile.close()
     input("Press enter to terminate")
+    driver.execute_script("options.logout();")
     driver.close()
 
 
