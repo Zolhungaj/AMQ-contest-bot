@@ -30,6 +30,12 @@ global logfile
 logfile = "AMQ-automator.log"
 
 
+def chat(driver, message):
+    chatbox = driver.find_element_by_id("gcInput")
+    chatbox.send_keys(message)
+    chatbox.send_keys(Keys.ENTER)
+
+
 def main():
     """
     the main function, where the magic happens
@@ -93,9 +99,11 @@ def main():
     # gameChat.viewQueue();
     # gcQueueCount
     # videoUrl = videoPreview.get_attribute("src")
+    chat(driver, "Hello World!")
     while True:
+        # program loop
         break
-        submit.click()
+        time.sleep(0.1)
     log("program closed normally")
     input("Press enter to terminate")
     driver.execute_script("options.logout();")
