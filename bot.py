@@ -35,7 +35,15 @@ def main():
     the main function, where the magic happens
     """
     log("AMQ-automator started")
-    driver = webdriver.Firefox(executable_path='geckodriver/geckodriver.exe')
+    with open("default.config") as f:
+        config = f.readlines()
+    code = config[0]
+    geckodriver_path = config[1]
+    username = config[2]
+    password = config[3]
+    room_name = config[4]
+    room_password = config[5]
+    driver = webdriver.Firefox(executable_path=geckodriver_path)
     driver.get('https://animemusicquiz.com')
     username_input = driver.find_element_by_id("loginUsername")
     password_input = driver.find_element_by_id("loginPassword")
@@ -52,9 +60,22 @@ def main():
     driver.execute_script("hostModal.toggleLoadContainer();")
     load = driver.find_element_by_id("mhLoadFromSaveCodeButton")
     load.click()
+    load_code_entry = driver.find_element_by_class_name("swal2-input")
+    load_code_entry.send_keys(code)
+    load_confirm = driver.find_element_by_class_name(
+        "swal2-confirm swal2-styled")
+    load_confirm.click()
+    room_name_input = driver.find_element_by_id("mhRoomNameInput")
+    room_name_input.send_keys("")
+    if room_password != "":
+        private_button = driver.find_element_by_id("mhPrivateRoom")
+        private_button.click()
+        room_password_input = driver.find_element_by_id("mhPasswordContainer")
+        room_password_input.send_keys(room_password)
+        driver.find_element_by_class_name
     videoUrl = videoPreview.get_attribute("src")
     while True:
-
+        break
         submit.click()
     log("program closed normally")
     logfile.close()

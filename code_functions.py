@@ -60,6 +60,59 @@ def int_to_query(input):
         return "Optional"
 
 
+def strbool_to_int(input):
+    if input.lower() == "true":
+        return 1
+    elif input.lower() == "false":
+        return 0
+
+
+def int_to_strbool(input):
+    input = int(input)
+    if input == 1:
+        return "True"
+    elif input == 0:
+        return "False"
+
+
+def int_to_selection(input):
+    input = int(input)
+    if input == 1:
+        return "Random"
+    elif input == 2:
+        return "Mainly Watched"
+    elif input == 3:
+        return "Only Watched"
+
+
+def selection_to_int(input):
+    if input.lower() == "random":
+        return 1
+    elif input.lower() == "mostly watched":
+        return 2
+    elif input.lower() == "only watched":
+        return 3
+
+
+def int_to_sample_point(input):
+    input = int(input)
+    if input == 1:
+        return "Start"
+    elif input == 2:
+        return "Middle"
+    elif input == 3:
+        return "End"
+
+
+def sample_point_to_int(input):
+    if input.lower() == "start":
+        return 1
+    elif input.lower() == "middle":
+        return 2
+    elif input.lower() == "end":
+        return 3
+
+
 def query_to_int(input):
     if input.lower() == "included":
         return 1
@@ -377,37 +430,37 @@ def code_to_file(code, filename):
 def code_to_text(code):
     lines = []
     pos = 0
-    lines.append("Version: %s" % code[pos])
+    lines.append("Version: %d" % base_36_to_int(code[pos]))
     pos += 1
     lines.append("Player count: %d" % base_36_to_int(code[pos]))
     pos += 1
     lines.append("Song count: %d" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Skip guess: %s" % code[pos])
+    lines.append("Skip guess: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Skip result: %s" % code[pos])
+    lines.append("Skip result: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Queuing: %s" % code[pos])
+    lines.append("Queuing: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Duplicate shows: %s" % code[pos])
+    lines.append("Duplicate shows: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Selection advanced: %s" % code[pos])
+    lines.append("Selection advanced: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Song selection simple: %s" % code[pos])
+    lines.append("Song selection simple: %s" % int_to_selection(code[pos]))
     pos += 1
-    lines.append("Selection watched: %s" % base_36_to_int(code[pos:pos+2]))
+    lines.append("Watched: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Selection unwatched: %s" % base_36_to_int(code[pos:pos+2]))
+    lines.append("Unwatched: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Selection random: %s" % base_36_to_int(code[pos:pos+2]))
+    lines.append("Random selection: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Type advanced: %s" % code[pos])
+    lines.append("Enable advanced type distribution: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Type opening: %s" % code[pos])
+    lines.append("Enable openings: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Type ending: %s" % code[pos])
+    lines.append("Enable endings: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Type insert: %s" % code[pos])
+    lines.append("Enable inserts: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Openings: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
@@ -417,7 +470,7 @@ def code_to_text(code):
     pos += 2
     lines.append("Type random: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Random time: %s" % code[pos])
+    lines.append("Enable random time: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Guess time: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
@@ -425,99 +478,99 @@ def code_to_text(code):
     pos += 2
     lines.append("Guess time high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Random sample: %s" % code[pos])
+    lines.append("Enable random sample: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Sample point: %s" % base_36_to_int(code[pos]))
+    lines.append("Sample point: %s" % int_to_sample_point(code[pos]))
     pos += 1
     lines.append("Sample point low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Sample point high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Random speed: %s" % code[pos])
+    lines.append("Enable random speed: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Const speed: %s" % base_36_to_int(code[pos]))
+    lines.append("Constant speed: %s" % base_36_to_int(code[pos]))
     pos += 1
-    lines.append("Random speed 1: %s" % code[pos])
+    lines.append("Speed 1: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Random speed 1.5: %s" % code[pos])
+    lines.append("Speed 1.5: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Random speed 2: %s" % code[pos])
+    lines.append("Speed 2: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Random speed 4: %s" % code[pos])
+    lines.append("Speed 4: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Song difficulty advanced: %s" % code[pos])
+    lines.append("Enable advanced difficulty: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Easy: %s" % code[pos])
+    lines.append("Easy: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Medium: %s" % code[pos])
+    lines.append("Medium: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("hard: %s" % code[pos])
+    lines.append("Hard: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Difficulty low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Difficulty high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Popularity advanced: %s" % code[pos])
+    lines.append("Enable advanced popularity: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Disliked: %s" % code[pos])
+    lines.append("Disliked: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Mixed: %s" % code[pos])
+    lines.append("Mixed: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Liked: %s" % code[pos])
+    lines.append("Liked: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Popularity low: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
     lines.append("Popularity high: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Player score advanced: %s" % code[pos])
+    lines.append("Player score advanced: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Player score low: %s" % base_36_to_int(code[pos]))
     pos += 1
     lines.append("Player score high: %s" % base_36_to_int(code[pos]))
     pos += 1
-    lines.append("Player score 1: %s" % code[pos])
+    lines.append("Player score 1: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 2: %s" % code[pos])
+    lines.append("Player score 2: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 3: %s" % code[pos])
+    lines.append("Player score 3: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 4: %s" % code[pos])
+    lines.append("Player score 4: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 5: %s" % code[pos])
+    lines.append("Player score 5: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 6: %s" % code[pos])
+    lines.append("Player score 6: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 7: %s" % code[pos])
+    lines.append("Player score 7: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 8: %s" % code[pos])
+    lines.append("Player score 8: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 9: %s" % code[pos])
+    lines.append("Player score 9: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Player score 10: %s" % code[pos])
+    lines.append("Player score 10: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score advanced: %s" % code[pos])
+    lines.append("Enable advanced anime score: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Anime score low: %s" % base_36_to_int(code[pos]))
     pos += 1
     lines.append("Anime score high: %s" % base_36_to_int(code[pos]))
     pos += 1
-    lines.append("Anime score 2: %s" % code[pos])
+    lines.append("Anime score 2: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 3: %s" % code[pos])
+    lines.append("Anime score 3: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 4: %s" % code[pos])
+    lines.append("Anime score 4: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 5: %s" % code[pos])
+    lines.append("Anime score 5: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 6: %s" % code[pos])
+    lines.append("Anime score 6: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 7: %s" % code[pos])
+    lines.append("Anime score 7: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 8: %s" % code[pos])
+    lines.append("Anime score 8: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 9: %s" % code[pos])
+    lines.append("Anime score 9: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Anime score 10: %s" % code[pos])
+    lines.append("Anime score 10: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Year ranges{")
     while code[pos] != "-":
@@ -534,15 +587,15 @@ def code_to_text(code):
                      )
     lines.append("}")
     pos += 1
-    lines.append("TV: %s" % code[pos])
+    lines.append("TV: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Movie: %s" % code[pos])
+    lines.append("Movie: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("OVA: %s" % code[pos])
+    lines.append("OVA: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("ONA: %s" % code[pos])
+    lines.append("ONA: %s" % int_to_strbool(code[pos]))
     pos += 1
-    lines.append("Special: %s" % code[pos])
+    lines.append("Special: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Genres{")
     while code[pos] != "-":
