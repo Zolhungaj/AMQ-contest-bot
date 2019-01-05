@@ -37,6 +37,70 @@ def chat(driver, message):
     chatbox.send_keys(Keys.ENTER)
 
 
+chat_pos = 0
+
+
+def scan_chat(driver):
+    """
+    scans the chat for interesting events.
+    Includes, but is not limited to:
+    chat commands
+    players joining/leaving
+    kicking/banning for unwanted phrases
+    """
+    global chat_pos
+    chat_window = driver.find_element_by_id("gcMessageContainer")
+    chat_pattern = re.compile(r"(?s)<li>(.*?)</li>")
+    chat_html = chat_window.get_attribute('innerHTML')
+    chat_messages = chat_pattern.findall(chat_html)
+    # print(chat_window.text)
+    player_message_pattern = re.compile(r'(?s)<img class="backerBadge.*?>.*<span class="gcUserName(?: clickAble" data-original-title="" title=")?">(.*?)</span>(.*)\n')
+    player_joined_as_player_pattern = re.compile(r'')
+    player_joined_as_spectator_pattern = re.compile(r'')
+    player_left_pattern = re.compile(r'')
+
+    for match in chat_messages[chat_pos:]:
+        print(match)
+        player_message = player_message_pattern.search(match)
+        if player_message:
+            name = player_message.group(1)
+            message = player_message.group(2)
+            print("%s said: \"%s\"" % (name, message))
+            if name not in admins and "bad word" in message:
+                kick_player(driver, name, "Pls do not use such language")
+            elif message[0] == "!":
+                handle_command(driver, name, message[1:])
+
+    if len(chat_messages) > chat_pos:
+        chat_pos = len(chat_messages)
+    pass
+
+
+def kick_player(driver, username, reason="something"):
+    driver.execute_script('lobby.kickPlayer("%s")' % username)
+    chat(driver, "Kicked player %s for %s." % (username, reason))
+
+
+def scan_lobby(driver):
+    pass
+
+
+admins = []
+stop = False
+
+
+def handle_command(driver, user, command):
+    print("Command detected: %s" % command)
+    if command.lower() == "stop":
+        if user in admins:
+            print("stop detected")
+            global stop
+            stop = True
+        else:
+            chat(driver, "You do not have permission to do that, %s" % user)
+    pass
+
+
 def main():
     """
     the main function, where the magic happens
@@ -48,6 +112,7 @@ def main():
     code = config[0]
     geckodriver_path = config[1]
     username = config[2]
+    admins.append(username)
     password = config[3]
     room_name = config[4]
     room_password = config[5]
@@ -102,16 +167,23 @@ def main():
     # gcQueueList
     # gameChat.viewQueue();
     # gcQueueCount
+    # lobby.kickPlayer("")
+    # lobby.changeToSpectator("")
     # videoUrl = videoPreview.get_attribute("src")
     chat(driver, "Hello World!")
     state = 0  # 0: lobby
-    while True:
-        # program loop
-        break
-        time.sleep(0.1)
-    log("program closed normally")
-    input("Press enter to terminate")
+    try:
+        while not stop:
+            # program loop
+            scan_chat(driver)
+            time.sleep(1)
+    except Exception as e:
+        log(str(e))
+    else:
+        log("program closed normally")
+    # input("Press enter to terminate")
     driver.execute_script("options.logout();")
+    time.sleep(1)
     driver.close()
 
 
