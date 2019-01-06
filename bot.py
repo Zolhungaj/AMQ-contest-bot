@@ -12,6 +12,79 @@ import subprocess
 
 import datetime
 
+import random
+
+import traceback
+
+class Player(object):
+    """represents a player"""
+    def __init__(self, username, note=""):
+        self.score = 0
+        self.username = username
+        self.note = note
+
+    def __repr__(self):
+        return "Player('%s', '%s')" % (self.username, self.note)
+
+
+class GameLobby(object):
+    """represents the lobby"""
+    def __init__(self, round=0, players=[]):
+        self.round = round
+        self.players = players
+        self.player_count = 0
+        for p in self.player:
+            if p.note == "":
+                player_count += 1
+
+    def remove_player(self, username, reason):
+        for p in self.players:
+            if p.username == username and p.note == "":
+                p.note = "[%s in round %d]" % (reason, self.round)
+                player_count -= 1
+
+    def add_player(self, username):
+        self.players.append(Player(username))
+        player_count += 1
+
+    def __repr__(self):
+        out = "GameLobby(%d, [" % (self.round)
+        for p in self.players:
+            out += repr(p) + ", "
+        out += "])"
+        return out
+
+
+class WaitingLobby:
+    def __init__(self, players=[]):
+        self.players = players
+    pass
+
+
+class MessageManager:
+    database = {"greeting": 3, "kick_chat": 1, "kick_pm": 1, "banned_word": 1,
+                "log_chat": 1, "something": 1}
+    langpack = "./langs/"
+
+    def __init__(self, directory="en_UK"):
+        self.directory = directory
+
+    def get_message(self, name, substitutions=[], number=None):
+        filename = name
+        if number is None:
+            filename += str(random.choice(range(self.database[name])))
+        else:
+            if number < self.database[name]:
+                filename += name + str(number)
+            else:
+                filename += name + str(self.database[name]-1)
+        filename += ".txt"
+        with open(langpack + directory + filename) as file:
+            base_text = file.read()
+        for n in range(len(substitutions)):
+            base_text = re.sub("$%d" % n+1, substitutions[n], base_text)
+        return base_text
+
 
 def log(message):
     """
@@ -27,14 +100,14 @@ def log(message):
     print(msg)
 
 
-global logfile
-logfile = "AMQ-automator.log"
+logfile = "AMQ-bot.log"
 
 
 def chat(driver, message):
     chatbox = driver.find_element_by_id("gcInput")
     chatbox.send_keys(message)
     chatbox.send_keys(Keys.ENTER)
+    log("Sent message: %s" % message)
 
 
 chat_pos = 0
@@ -55,30 +128,78 @@ def scan_chat(driver):
     chat_messages = chat_pattern.findall(chat_html)
     # print(chat_window.text)
     player_message_pattern = re.compile(r'(?s)<img class="backerBadge.*?>.*<span class="gcUserName(?: clickAble" data-original-title="" title=")?">(.*?)</span>(.*)\n')
-    player_joined_as_player_pattern = re.compile(r'')
-    player_joined_as_spectator_pattern = re.compile(r'')
-    player_left_pattern = re.compile(r'')
+    player_joined_as_player = re.compile(r'<span>(.*?) joined the room.</span><br>')
+    player_joined_as_spectator = re.compile(r'<span>(.*?) has started spectating.</span><br>')
+    player_changed_to_player = re.compile(r'<span>(.*?) changed to player</span><br>')
+    player_changed_to_spectator = re.compile(r'<span>(.*?) changed to spectator</span><br>')
+    player_left = re.compile(r'<span>(.*?) has left the game.</span><br>')
+    detect_amq_emoji = re.compile(r'\n\s<img class="amqEmoji" alt="(.*?)" draggable="false" src=".*?">\n')
+    detect_emoji = re.compile(r'<img class="emoji" draggable="false" alt=".*?" src="(.*?)">')
 
     for match in chat_messages[chat_pos:]:
         print(match)
         player_message = player_message_pattern.search(match)
+        join_as_player = None
+        join_as_spectator = None
+        spectator_to_player = None
+        player_to_spectator = None
+        player_left = None
+        done = False
         if player_message:
             name = player_message.group(1)
             message = player_message.group(2)
+            num = 1
+            while num == 1:
+                message, num = detect_amq_emoji.subn(r"<\g<1>>", message, 1)
+            num = 1
+            while num == 1:
+                message, num = detect_emoji.subn(r"<\g<1>>", message, 1)
             print("%s said: \"%s\"" % (name, message))
             if name not in admins and "bad word" in message:
                 kick_player(driver, name, "Pls do not use such language")
             elif message[0] == "!":
                 handle_command(driver, name, message[1:])
-
+            done = True
+        if not done:
+            join_as_player = player_joined_as_player.search(match)
+            # the glory of not being able to assign in an if
+        if not done and join_as_player:
+            done = True
+            pass
+        if not done:
+            join_as_spectator = player_joined_as_spectator.search(match)
+        if not done and join_as_spectator:
+            done = True
+            pass
+        if not done:
+            spectator_to_player = player_changed_to_player.search(match)
+        if not done and spectator_to_player:
+            done = True
+            pass
+        if not done:
+            player_to_spectator = player_changed_to_spectator.search(match)
+        if not done and player_to_spectator:
+            done = True
+            pass
+        if not done:
+            player_left = player_left.search(match)
+        if not done and player_left:
+            done = True
+            pass
     if len(chat_messages) > chat_pos:
         chat_pos = len(chat_messages)
     pass
 
 
-def kick_player(driver, username, reason="something"):
+def message_player(driver, username, message):
+    pass
+
+
+def kick_player(driver, username, reason=None):
+    reason = reason or "something"
     driver.execute_script('lobby.kickPlayer("%s")' % username)
     chat(driver, "Kicked player %s for %s." % (username, reason))
+    message_player(driver, username, "You were kicked for: %s" % reason)
 
 
 def scan_lobby(driver):
@@ -170,15 +291,30 @@ def main():
     # lobby.kickPlayer("")
     # lobby.changeToSpectator("")
     # videoUrl = videoPreview.get_attribute("src")
+    # swal2-popup
+    # class="swal2-confirm
+    # class="swal2-cancel
     chat(driver, "Hello World!")
-    state = 0  # 0: lobby
+    state = 0  # 0: idle
+    state_timer = 40
     try:
         while not stop:
             # program loop
+            if state == 0:
+                scan_lobby(driver)
+                if state_timer == 0:
+                    chat(driver, "idle1")
+                    state_timer = 40
+                pass
+            elif state == 1:
+                pass
+            elif state == 2:
+                pass
             scan_chat(driver)
             time.sleep(1)
+            state_timer -= 1
     except Exception as e:
-        log(str(e))
+        traceback.print_exc()
     else:
         log("program closed normally")
     # input("Press enter to terminate")

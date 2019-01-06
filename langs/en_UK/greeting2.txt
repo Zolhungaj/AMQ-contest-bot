@@ -1,1 +1,1 @@
-Welcome to the room, $1!
+Welcome to the room, &1!
