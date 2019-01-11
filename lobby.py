@@ -1,0 +1,119 @@
+from player import Player
+from song import Song
+
+
+class Lobby:
+    def remove_player(self, username, reason):
+        return
+
+
+class GameLobby(Lobby):
+    """represents the lobby"""
+    def __init__(self, round=0, players=[]):
+        self.round = round
+        self.last_round = round - 1
+        self.players = players
+        self.player_count = 0
+        for p in self.player:
+            if p.note == "":
+                self.player_count += 1
+        self.time = -1
+        self.song_list = []
+
+    def remove_player(self, username, reason):
+        for p in self.players:
+            if p.username == username and p.note == "":
+                p.note = "[%s in round %d]" % (reason, self.round)
+                player_count -= 1
+
+    def add_player(self, username):
+        self.players.append(Player(username))
+        player_count += 1
+
+    def scan_lobby(self):
+        hider = self.driver.find_element_by_id("qpAnimeNameHider")
+        if "hide" in hider.get_attribute("class"):
+            playround = True
+        else:
+            playround = False
+        self.round = int(
+            self.driver.find_element_by_id("qpCurrentSongCount").innerHTML)
+        if playround:
+            self.time = int(self.driver.find_element_by_id("qpHiderText").innerHTML)
+        elif self.round > self.last_round:
+            self.last_round = self.round
+            anime_name = self.driver.find_element_by_id("qpAnimeName").innerHTML
+            song_name = self.driver.find_element_by_id("qpSongName").innerHTML
+            artist = self.driver.find_element_by_id("qpSongArtist").innerHTML
+            song_type = self.driver.find_element_by_id("qpSongType").innerHTML
+            song = Song(anime_name, song_name, artist, song_type)
+            self.song_list.append(song)
+            for player in self.players:
+                status = self.driver.find_element_by_id("qpAvatar-%s" % player.username)
+                if "disabled" in status.get_attribute("class"):
+                    self.remove_player(player.username, "Left the game")
+                answer = status.find_element_by_class_name("qpAvatarAnswerText").innerHTML
+                correct = status.find_element_by_class_name("qpAvatarAnswerContainer")
+                score = status.find_element_by_class_name("qpAvatarPointText").innerHTML
+                if "rightAnswer" in correct.get_attribute("class"):
+                    player.correct_songs.append([song, answer])
+                elif "wrongAnswer" in correct.get_attribute("class"):
+                    player.wrong_songs.append([song, answer])
+                player.score = score
+
+    def __repr__(self):
+        out = "GameLobby(%d, [" % (self.round)
+        for p in self.players:
+            out += repr(p) + ", "
+        out += "])"
+        return out
+
+
+class WaitingLobby(Lobby):
+    def __init__(self, driver, player_max, players=None):
+        self.driver = driver
+        self.players = players or [None]*player_max
+        self.ready_players = [False]*player_max
+        self.player_max = player_max
+
+    def scan_lobby(self):
+        for n in range(self.player_max):
+            element = self.driver.find_element_by_id("lobbyAvatar%d" % n)
+            is_player = element.find_element_by_class_name("lobbyAvatarTextContainer")
+            if "invisible" in is_player.get_attribute("class"):
+                self.players[n] = None
+            else:
+                level = element.find_element_by_class_name("lobbyAvatarLevel")
+                level = int(level.text)
+                # print(level)
+                name = element.find_element_by_class_name("lobbyAvatarName")
+                username = name.text
+                # print(username)
+                if self.players[n] is None or self.players[n].username != username:
+                    self.players[n] = Player(username, level)
+                ready = element.get_attribute("class")
+                if "lbReady" in ready:
+                    self.ready_players[n] = True
+                else:
+                    self.ready_players[n] = False
+
+    def get_unready(self):
+        not_ready = []
+        for n in range(self.player_max):
+            if self.players[n] is not None and not self.ready_players[n]:
+                not_ready.append(self.players[n])
+        return not_ready
+
+    def all_ready(self):
+        return self.get_unready() == []
+
+    def generateGameLobby(self):
+        self.scan_lobby()
+        return GameLobby(players)
+
+    def player_count(self):
+        res = 0
+        for p in self.players:
+            if p is not None:
+                res += 1
+        return res
