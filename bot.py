@@ -83,7 +83,12 @@ class Player(object):
                                            self.level, self.note)
 
 
-class GameLobby(object):
+class Lobby:
+    def remove_player(self, username, reason):
+        return
+
+
+class GameLobby(Lobby):
     """represents the lobby"""
     def __init__(self, round=0, players=[]):
         self.round = round
@@ -145,7 +150,7 @@ class GameLobby(object):
         return out
 
 
-class WaitingLobby:
+class WaitingLobby(Lobby):
     def __init__(self, driver, player_max, players=None):
         self.driver = driver
         self.players = players or [None]*player_max
@@ -179,6 +184,9 @@ class WaitingLobby:
             if self.players[n] is not None and not self.ready_players[n]:
                 not_ready.append(self.players[n])
         return not_ready
+
+    def all_ready(self):
+        return self.get_unready() == []
 
     def generateGameLobby(self):
         self.scan_lobby()
@@ -481,6 +489,7 @@ class Game:
     def kick_player(self, username, reason=None):
         reason = reason or self.msg_man.get_message("something")
         if username not in self.admins:
+            self.lobby.remove_player(username, reason)
             self.driver.execute_script('lobby.kickPlayer("%s")' % username)
             self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
             self.message_player(username,
