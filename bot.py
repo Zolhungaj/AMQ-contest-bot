@@ -54,26 +54,47 @@ class Logger:
         self.log(message, self.event_log)
 
 
-class Player(object):
-    """represents a player"""
-    def __init__(self, username, note=""):
-        self.score = 0
-        self.username = username
-        self.note = note
+class Song:
+    def __init__(self, anime, name, artist, type):
+        self.anime = anime
+        self.name = name
+        self.artist = artist
+        self.type = type
 
     def __repr__(self):
-        return "Player('%s', '%s')" % (self.username, self.note)
+        return "Song('%s', '%s', '%s', '%s')" % (self.anime,
+                                                 self.name,
+                                                 self.artist,
+                                                 self.type)
+
+
+class Player(object):
+    """represents a player"""
+    def __init__(self, username, level=0, note=""):
+        self.score = 0
+        self.username = username
+        self.level = level
+        self.note = note
+        self.wrong_songs = []
+        self.correct_songs = []
+
+    def __repr__(self):
+        return "Player('%s', %d, '%s')" % (self.username,
+                                           self.level, self.note)
 
 
 class GameLobby(object):
     """represents the lobby"""
     def __init__(self, round=0, players=[]):
         self.round = round
+        self.last_round = round - 1
         self.players = players
         self.player_count = 0
         for p in self.player:
             if p.note == "":
-                player_count += 1
+                self.player_count += 1
+        self.time = -1
+        self.song_list = []
 
     def remove_player(self, username, reason):
         for p in self.players:
@@ -85,6 +106,37 @@ class GameLobby(object):
         self.players.append(Player(username))
         player_count += 1
 
+    def scan_lobby(self):
+        hider = self.driver.find_element_by_id("qpAnimeNameHider")
+        if "hide" in hider.get_attribute("class"):
+            playround = True
+        else:
+            playround = False
+        self.round = int(
+            self.driver.find_element_by_id("qpCurrentSongCount").innerHTML)
+        if playround:
+            self.time = int(self.driver.find_element_by_id("qpHiderText").innerHTML)
+        elif self.round > self.last_round:
+            self.last_round = self.round
+            anime_name = self.driver.find_element_by_id("qpAnimeName").innerHTML
+            song_name = self.driver.find_element_by_id("qpSongName").innerHTML
+            artist = self.driver.find_element_by_id("qpSongArtist").innerHTML
+            song_type = self.driver.find_element_by_id("qpSongType").innerHTML
+            song = Song(anime_name, song_name, artist, song_type)
+            self.song_list.append(song)
+            for player in self.players:
+                status = self.driver.find_element_by_id("qpAvatar-%s" % player.username)
+                if "disabled" in status.get_attribute("class"):
+                    self.remove_player(player.username, "Left the game")
+                answer = status.find_element_by_class_name("qpAvatarAnswerText").innerHTML
+                correct = status.find_element_by_class_name("qpAvatarAnswerContainer")
+                score = status.find_element_by_class_name("qpAvatarPointText").innerHTML
+                if "rightAnswer" in correct.get_attribute("class"):
+                    player.correct_songs.append([song, answer])
+                elif "wrongAnswer" in correct.get_attribute("class"):
+                    player.wrong_songs.append([song, answer])
+                player.score = score
+
     def __repr__(self):
         out = "GameLobby(%d, [" % (self.round)
         for p in self.players:
@@ -94,15 +146,57 @@ class GameLobby(object):
 
 
 class WaitingLobby:
-    def __init__(self, players=[]):
-        self.players = players
-    pass
+    def __init__(self, driver, player_max, players=None):
+        self.driver = driver
+        self.players = players or [None]*player_max
+        self.ready_players = [False]*player_max
+        self.player_max = player_max
+
+    def scan_lobby(self):
+        for n in range(self.player_max):
+            element = self.driver.find_element_by_id("lobbyAvatar%d" % n)
+            is_player = element.find_element_by_class_name("lobbyAvatarTextContainer")
+            if "invisible" in is_player.get_attribute("class"):
+                self.players[n] = None
+            else:
+                level = element.find_element_by_class_name("lobbyAvatarLevel")
+                level = int(level.text)
+                # print(level)
+                name = element.find_element_by_class_name("lobbyAvatarName")
+                username = name.text
+                # print(username)
+                if self.players[n] is None or self.players[n].username != username:
+                    self.players[n] = Player(username, level)
+                ready = element.get_attribute("class")
+                if "lbReady" in ready:
+                    self.ready_players[n] = True
+                else:
+                    self.ready_players[n] = False
+
+    def get_unready(self):
+        not_ready = []
+        for n in range(self.player_max):
+            if self.players[n] is not None and not self.ready_players[n]:
+                not_ready.append(self.players[n])
+        return not_ready
+
+    def generateGameLobby(self):
+        self.scan_lobby()
+        return GameLobby(players)
+
+    def player_count(self):
+        res = 0
+        for p in self.players:
+            if p is not None:
+                res += 1
+        return res
 
 
 class MessageManager:
     database = {"greeting_player": 3, "kick_chat": 1, "kick_pm": 1,
                 "banned_word": 1, "permission_denied": 1,
-                "log_chat_out": 1, "something": 1, }
+                "log_chat_out": 1, "something": 1, "hello_world": 1,
+                "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):
@@ -112,19 +206,23 @@ class MessageManager:
 
     def get_message(self, name, substitutions=[], number=None):
         filename = name
-        if number is None:
-            filename += str(random.choice(range(self.database[name])))
-        else:
-            if number < self.database[name]:
-                filename += name + str(number)
+        try:
+            if number is None:
+                filename += str(random.choice(range(self.database[name])))
             else:
-                filename += name + str(self.database[name]-1)
-        filename += ".txt"
-        with open(self.path + filename) as file:
-            base_text = file.read()
-        for n in range(len(substitutions)):
-            base_text = re.sub("&%d" % (n+1), substitutions[n], base_text)
-        return base_text
+                if number < self.database[name]:
+                    filename += name + str(number)
+                else:
+                    filename += name + str(self.database[name]-1)
+            filename += ".txt"
+            with open(self.path + filename) as file:
+                base_text = file.read()
+            for n in range(len(substitutions)):
+                base_text = re.sub("&%d" % (n+1), str(substitutions[n]), base_text)
+            return base_text
+        except Exception:
+            traceback.print_exc()
+            return name
 
 
 class Game:
@@ -164,9 +262,19 @@ class Game:
         self.msg_man = MessageManager(directory=self.lang)
         self.driver = webdriver.Firefox(executable_path=self.geckodriver_path)
         self.state = 0
-        self.state_timer = 40
+        self.tick_rate = 0.5
+        self.idle_time = 40
+        self.waiting_time = 180
+        self.waiting_time_limit = 0
+        self.ready_wait_time = 30
+        self.state_timer = int(self.idle_time/self.tick_rate)
         self.log = Logger()
         self.chat_pos = 0
+        self.lobby = None
+        self.max_players = 8
+
+    def set_state_time(self, new_time):
+        self.state_timer = int(new_time/self.tick_rate)
 
     def close(self):
         self.driver.execute_script("options.logout();")
@@ -176,7 +284,6 @@ class Game:
     def start(self):
         self.bootstrap()
         self.run()
-        pass
 
     def bootstrap(self):
         code = self.code
@@ -229,24 +336,60 @@ class Game:
         start_room.click()
 
     def run(self):
-        self.chat("Hello World!")
+        self.chat(self.msg_man.get_message("hello_world"))
+        self.lobby = WaitingLobby(self.driver, self.max_players)
         while self.state != -1:
             if self.state == 0:
                 self.idle()
-            if self.state == 1:
+            elif self.state == 1:
+                self.wait_for_players()
+            elif self.state == 2:
+                self.wait_for_ready()
+            elif self.state == 3:
+                self.run_game()
+            elif self.state == 4:
+                self.finish_game()
+                # skipController.toggle()
                 pass
             self.scan_chat()
-            time.sleep(1)
+            time.sleep(self.tick_rate)
         self.close()
 
     def idle(self):
         self.state_timer -= 1
         if self.state_timer == 0:
-            self.chat("idle1")
-            self.state_timer = 40
-        self.scan_lobby()
-        if False:
+            self.chat(self.msg_man.get_message("idle"))
+            self.set_state_time(self.idle_time)
+        self.lobby.scan_lobby()
+        if self.lobby.player_count() > 1:
             self.state = 1
+            self.set_state_time(self.waiting_time)
+            self.waiting_time_limit = 0
+
+    def wait_for_players(self):
+        self.state_timer -= 1
+        if self.state_timer % (int(10/self.tick_rate)) == 0:
+            self.chat(self.msg_man.get_message("starting_in", [int((self.state_timer-self.waiting_time_limit)*self.tick_rate)]))
+        if self.state_timer <= self.waiting_time_limit:
+            self.chat(self.msg_man.get_message("get_ready"))
+            self.set_state_time(self.ready_wait_time)
+            self.state = 2
+        self.lobby.scan_lobby()
+        self.waiting_time_limit = (self.lobby.player_count()-1)*int(self.waiting_time_limit/self.max_players)
+        if self.lobby.player_count() == 1:
+            self.state = 0
+            self.set_state_time(self.idle_time)
+
+    def wait_for_ready(self):
+        print("wait for ready")
+        self.state_timer -= 1
+        self.scan_lobby()
+
+    def run_game():
+        pass
+
+    def finish_game():
+        pass
 
     def chat(self, message):
         chatbox = self.driver.find_element_by_id("gcInput")
@@ -296,7 +439,7 @@ class Game:
                 while num == 1:
                     message, num = detect_emoji.subn(r"<\g<1>>", message, 1)
                 self.log.chat("%s said: \"%s\"" % (name, message))
-                if name not in self.admins and "bad word" in message:
+                if "bad word" in message:
                     self.kick_player(name, self.msg_man.get_message("banned_word"))
                 elif message[0] == "!":
                     self.handle_command(name, message[1:])
@@ -336,18 +479,28 @@ class Game:
         pass
 
     def kick_player(self, username, reason=None):
-        reason = reason or msg_man.get_message("something")
-        self.driver.execute_script('lobby.kickPlayer("%s")' % username)
-        self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
-        self.message_player(username,
-                            self.msg_man.get_message("kick_pm", [reason]))
+        reason = reason or self.msg_man.get_message("something")
+        if username not in self.admins:
+            self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+            self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
+            self.message_player(username,
+                                self.msg_man.get_message("kick_pm", [reason]))
+        elif username != self.username:
+            self.chat(self.msg_man.get_message("scorn_admin", [username]))
 
     def scan_lobby(self):
         pass
 
     def handle_command(self, user, command):
         print("Command detected: %s" % command)
-        if command.lower() == "stop":
+        match = re.match("stop|addadmin|pause|help|votekick|voteban|about", command)
+        if not match:
+            self.chat("not implemented")
+            return
+        match = re.match("addadmin ([^ ]*)", command)
+        if match:
+            self.admins.append(match.group(1))
+        elif command == "stop":
             if user in self.admins:
                 print("stop detected")
                 self.state = -1
