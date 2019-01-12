@@ -145,7 +145,7 @@ class Game:
             #    # skipController.toggle()
             self.scan_chat()
             self.silent_counter -= 1
-            if self.silent_counter < 0 and self.state < 3:
+            if self.silent_counter < 0:
                 for u in self.kick_list:
                     self.silent_kick(u)
                 self.silent_counter = int(5/self.tick_rate)
@@ -172,7 +172,7 @@ class Game:
             self.set_state_time(self.ready_wait_time)
             self.state = 2
         self.lobby.scan_lobby()
-        self.waiting_time_limit = (self.lobby.player_count()-1)*int(self.waiting_time_limit/self.max_players)
+        self.waiting_time_limit = (self.lobby.player_count()-1)*int(self.waiting_time/(self.max_players-1))
         if self.lobby.player_count() == 1:
             self.state = 0
             self.set_state_time(self.idle_time)
@@ -383,12 +383,20 @@ class Game:
                 self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
                 self.message_player(username,
                                     self.msg_man.get_message("kick_pm", [reason]))
+            elif username not in [p.username for p in self.lobby.players]:
+                self.driver.execute_script('gameChat.kickSpectator("%s")' % username)
+                self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
+                self.message_player(username,
+                                    self.msg_man.get_message("kick_pm", [reason]))
             self.kick_list.append(username)
         elif username != self.username:
             self.chat(self.msg_man.get_message("scorn_admin", [username]))
 
     def silent_kick(self, username):
-        self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+        if self.state < 3:
+            self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+        else:
+            self.driver.execute_script('gameChat.kickSpectator("%s")' % username)
 
     def handle_command(self, user, command):
         print("Command detected: %s" % command)
