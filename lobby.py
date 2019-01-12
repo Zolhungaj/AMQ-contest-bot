@@ -11,6 +11,7 @@ class GameLobby(Lobby):
     """represents the lobby"""
     def __init__(self, driver, players=[], round=0):
         self.round = round
+        self.total_rounds = -1
         self.last_round = round - 1
         self.players = [p for p in players if p is not None]
         self.player_count = 0
@@ -29,7 +30,7 @@ class GameLobby(Lobby):
         for p in self.players:
             if p.username == username and p.note == "":
                 p.note = "[%s in round %d]" % (reason, self.round)
-                player_count -= 1
+                self.player_count -= 1
 
     def add_player(self, username):
         self.players.append(Player(username))
@@ -43,6 +44,8 @@ class GameLobby(Lobby):
             playround = False
         self.round = int(
             self.driver.find_element_by_id("qpCurrentSongCount").text)
+        self.total_rounds = int(
+            self.driver.find_element_by_id("qpTotalSongCount").text)
         if playround:
             hider_text = self.driver.find_element_by_id("qpHiderText").text
             if hider_text == "Answers":
@@ -79,6 +82,20 @@ class GameLobby(Lobby):
                 elif "wrongAnswer" in correct.get_attribute("class"):
                     player.wrong_songs.append([song, answer])
                 player.score = int(score)
+
+    def verify_players(self):
+        actual_players = []
+        for p in self.players:
+            try:
+                self.driver.find_element_by_id("qpAvatar-%s" % p.username)
+                actual_players.append(p)
+            except Exception:
+                pass
+        self.players = actual_players
+        self.player_count = 0
+        for p in self.players:
+            if p.note == "":
+                self.player_count += 1
 
     def __repr__(self):
         out = "GameLobby(["

@@ -44,6 +44,10 @@ class Game:
         self.room_name = config[4]
         self.room_password = config[5]
         self.lang = config[6]
+        self.banned_word_path = config[7]
+        with open(self.banned_word_path) as f:
+            list = f.read().split("\n")[:-1]
+            self.banned_word_pattern = re.compile(r"\b(" + "|".join(list) + ")")
         self.msg_man = MessageManager(directory=self.lang)
         self.driver = webdriver.Firefox(executable_path=self.geckodriver_path)
         self.state = 0
@@ -59,6 +63,8 @@ class Game:
         self.max_players = 8
         self.last_round = -1
         self.skipped_playback = False
+        self.kick_list = []
+        self.silent_counter = int(5/self.tick_rate)
 
     def set_state_time(self, new_time):
         self.state_timer = int(new_time/self.tick_rate)
@@ -134,11 +140,15 @@ class Game:
                 self.wait_for_ready()
             elif self.state == 3:
                 self.run_game()
-            elif self.state == 4:
-                self.finish_game()
-                # skipController.toggle()
-                pass
+            # elif self.state == 4:
+            #    # self.finish_game()
+            #    # skipController.toggle()
             self.scan_chat()
+            self.silent_counter -= 1
+            if self.silent_counter < 0 and self.state < 3:
+                for u in self.kick_list:
+                    self.silent_kick(u)
+                self.silent_counter = int(5/self.tick_rate)
             time.sleep(self.tick_rate)
         self.close()
 
@@ -171,6 +181,10 @@ class Game:
         print("wait for ready")
         self.state_timer -= 1
         self.lobby.scan_lobby()
+        if self.lobby.player_count() == 1:
+            self.state = 0
+            self.set_state_time(self.idle_time)
+            return
         if self.lobby.all_ready():
             self.start_game()
         elif self.state_timer < int(-10/self.tick_rate):
@@ -194,6 +208,7 @@ class Game:
         self.last_round = -1
         self.mute_sound()
         self.select_quality("Sound")
+        self.lobby.verify_players()
 
     def run_game(self):
         self.lobby.scan_lobby()
@@ -207,19 +222,29 @@ class Game:
             self.chat(self.msg_man.get_message("answer_reveal", [self.lobby.last_song.anime]))
             for p in self.lobby.players:
                 print("%s: %d" % (p.username, p.score))
+            if self.lobby.round == self.lobby.total_rounds:
+                self.finish_game()
+                return
         if self.lobby.player_count < 2:
             self.abort_game()
 
     def abort_game(self):
+        self.chat(self.msg_man.get_message("abort_game"))
         self.driver.execute_script('quiz.startReturnLobbyVote();')
-        time.sleep(4)
+        time.sleep(1)
         self.driver.execute_script('skipController.toggle()')
-        time.sleep(4)
+        time.sleep(1)
         self.finish_game()
 
     def finish_game(self):
         # TODO record game
-        self.lobby = WaitingLobby()
+        while True:
+            try:
+                self.lobby.scan_lobby()
+            except Exception:
+                break
+            time.sleep(self.tick_rate)
+        self.lobby = WaitingLobby(self.driver, self.max_players)
         self.state = 0
         self.set_state_time(self.idle_time)
 
@@ -286,7 +311,7 @@ class Game:
                 while num == 1:
                     message, num = self.detect_emoji.subn(r"<\g<1>>", message, 1)
                 self.log.chat("%s said: \"%s\"" % (name, message))
-                if "bad word" in message:
+                if self.detect_banned_words(message):
                     self.kick_player(name, self.msg_man.get_message("banned_word"))
                 elif message[0] == "!":
                     self.handle_command(name, message[1:])
@@ -295,13 +320,23 @@ class Game:
                 join_as_player = self.player_joined_as_player.search(match)
                 # the glory of not being able to assign in an if
             if join_as_player:
-                self.chat(self.msg_man.get_message("greeting_player",
-                                                   [join_as_player.group(1)]))
+                username = join_as_player.group(1)
+                if self.detect_banned_words(username):
+                    self.kick_player(username, self.msg_man.get_message("banned_word"))
+                else:
+                    self.chat(self.msg_man.get_message("greeting_player",
+                                                       [join_as_player.group(1)]))
                 done = True
                 pass
             if not done:
                 join_as_spectator = self.player_joined_as_spectator.search(match)
             if join_as_spectator:
+                username = join_as_spectator.group(1)
+                if self.detect_banned_words(username):
+                    self.kick_player(username, self.msg_man.get_message("banned_word"))
+                else:
+                    self.chat(self.msg_man.get_message("greeting_player",
+                                                       [join_as_spectator.group(1)]))
                 done = True
                 pass
             if not done:
@@ -322,6 +357,14 @@ class Game:
         if len(chat_messages) > chat_pos:
             self.chat_pos = len(chat_messages)
 
+    def detect_banned_words(self, message):
+        match = self.banned_word_pattern.search(message.lower())
+        if match:
+            print(match.group(0))
+            return True
+        else:
+            return False
+
     def message_player(self, username, message):
         # socialTab.startChat("username")
         self.driver.execute_script('socialTab.startChat("%s")' % username)
@@ -334,13 +377,18 @@ class Game:
     def kick_player(self, username, reason=None):
         reason = reason or self.msg_man.get_message("something")
         if username not in self.admins:
-            self.lobby.remove_player(username, reason)
-            self.driver.execute_script('lobby.kickPlayer("%s")' % username)
-            self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
-            self.message_player(username,
-                                self.msg_man.get_message("kick_pm", [reason]))
+            if self.state < 3:
+                self.lobby.remove_player(username, reason)
+                self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+                self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
+                self.message_player(username,
+                                    self.msg_man.get_message("kick_pm", [reason]))
+            self.kick_list.append(username)
         elif username != self.username:
             self.chat(self.msg_man.get_message("scorn_admin", [username]))
+
+    def silent_kick(self, username):
+        self.driver.execute_script('lobby.kickPlayer("%s")' % username)
 
     def handle_command(self, user, command):
         print("Command detected: %s" % command)
