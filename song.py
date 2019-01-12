@@ -10,3 +10,6 @@ class Song:
                                                  self.name,
                                                  self.artist,
                                                  self.type)
+
+    def __str__(self):
+        return "%s:\n[%s]\n「%s」\nby: %s\n" % (self.anime, self.type, self.name, self.artist)

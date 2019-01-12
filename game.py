@@ -57,6 +57,8 @@ class Game:
         self.chat_pos = 0
         self.lobby = None
         self.max_players = 8
+        self.last_round = -1
+        self.skipped_playback = False
 
     def set_state_time(self, new_time):
         self.state_timer = int(new_time/self.tick_rate)
@@ -168,13 +170,81 @@ class Game:
     def wait_for_ready(self):
         print("wait for ready")
         self.state_timer -= 1
-        self.scan_lobby()
+        self.lobby.scan_lobby()
+        if self.lobby.all_ready():
+            self.start_game()
+        elif self.state_timer < int(-10/self.tick_rate):
+            self.start_game()
+        elif self.state_timer == 0:
+            for p in self.lobby.get_unready():
+                self.move_to_spectator(p.username)
 
-    def run_game():
-        pass
+    def start_game(self):
+        self.driver.execute_script("lobby.fireMainButtonEvent();")
+        time.sleep(2)
+        try:
+            pop_up = self.driver.find_element_by_class_name("swal2-container")
+            accept = pop_up.find_element_by_class_name("swal2-confirm")
+            accept.click()
+            time.sleep(2)
+        except Exception:
+            pass
+        self.lobby = self.lobby.generateGameLobby()
+        self.state = 3
+        self.last_round = -1
+        self.mute_sound()
+        self.select_quality("Sound")
 
-    def finish_game():
-        pass
+    def run_game(self):
+        self.lobby.scan_lobby()
+        if self.lobby.round > self.last_round:
+            self.last_round = self.lobby.round
+            self.driver.execute_script('skipController.toggle()')
+            self.skipped_playback = False
+        if self.lobby.playback and not self.skipped_playback:
+            self.skipped_playback = True
+            self.driver.execute_script('skipController.toggle()')
+            self.chat(self.msg_man.get_message("answer_reveal", [self.lobby.last_song.anime]))
+            for p in self.lobby.players:
+                print("%s: %d" % (p.username, p.score))
+        if self.lobby.player_count < 2:
+            self.abort_game()
+
+    def abort_game(self):
+        self.driver.execute_script('quiz.startReturnLobbyVote();')
+        time.sleep(4)
+        self.driver.execute_script('skipController.toggle()')
+        time.sleep(4)
+        self.finish_game()
+
+    def finish_game(self):
+        # TODO record game
+        self.lobby = WaitingLobby()
+        self.state = 0
+        self.set_state_time(self.idle_time)
+
+    def move_to_spectator(self, username):
+        self.driver.execute_script('lobby.changeToSpectator("%s")' % username)
+
+    def mute_sound(self):
+        icon = self.driver.find_element_by_id("qpVolumeIcon")
+        if "off" not in icon.get_attribute("class"):
+            icon.click()
+
+    def select_quality(self, quality):
+        quality_list = self.driver.find_element_by_id("qpQualityList")
+        cog = self.driver.find_element_by_id("qpQuality")
+        actions = ActionChains(self.driver)
+        actions.move_to_element(cog)
+        actions.perform()
+        for p in quality_list.find_elements_by_tag_name("li"):
+            if p.text == quality:
+                button = p
+        time.sleep(1)
+        actions = ActionChains(self.driver)
+        actions.move_to_element(button)
+        actions.click(button)
+        actions.perform()
 
     def chat(self, message):
         chatbox = self.driver.find_element_by_id("gcInput")
@@ -196,18 +266,10 @@ class Game:
         chat_html = chat_window.get_attribute('innerHTML')
         chat_messages = chat_pattern.findall(chat_html)
         # print(chat_window.text)
-        player_message_pattern = self.player_message_pattern
-        player_joined_as_player = self.player_joined_as_player
-        player_joined_as_spectator = self.player_joined_as_spectator
-        player_changed_to_player = self.player_changed_to_player
-        player_changed_to_spectator = self.player_changed_to_spectator
-        player_left_pattern = self.player_left_pattern
-        detect_amq_emoji = self.detect_amq_emoji
-        detect_emoji = self.detect_emoji
 
         for match in chat_messages[chat_pos:]:
             print(match)
-            player_message = player_message_pattern.search(match)
+            player_message = self.player_message_pattern.search(match)
             join_as_player = None
             join_as_spectator = None
             spectator_to_player = None
@@ -219,10 +281,10 @@ class Game:
                 message = player_message.group(2)
                 num = 1
                 while num == 1:
-                    message, num = detect_amq_emoji.subn(r"<\g<1>>", message, 1)
+                    message, num = self.detect_amq_emoji.subn(r"<\g<1>>", message, 1)
                 num = 1
                 while num == 1:
-                    message, num = detect_emoji.subn(r"<\g<1>>", message, 1)
+                    message, num = self.detect_emoji.subn(r"<\g<1>>", message, 1)
                 self.log.chat("%s said: \"%s\"" % (name, message))
                 if "bad word" in message:
                     self.kick_player(name, self.msg_man.get_message("banned_word"))
@@ -230,31 +292,31 @@ class Game:
                     self.handle_command(name, message[1:])
                 done = True
             if not done:
-                join_as_player = player_joined_as_player.search(match)
+                join_as_player = self.player_joined_as_player.search(match)
                 # the glory of not being able to assign in an if
-            if not done and join_as_player:
+            if join_as_player:
                 self.chat(self.msg_man.get_message("greeting_player",
                                                    [join_as_player.group(1)]))
                 done = True
                 pass
             if not done:
-                join_as_spectator = player_joined_as_spectator.search(match)
-            if not done and join_as_spectator:
+                join_as_spectator = self.player_joined_as_spectator.search(match)
+            if join_as_spectator:
                 done = True
                 pass
             if not done:
-                spectator_to_player = player_changed_to_player.search(match)
-            if not done and spectator_to_player:
+                spectator_to_player = self.player_changed_to_player.search(match)
+            if spectator_to_player:
                 done = True
                 pass
             if not done:
-                player_to_spectator = player_changed_to_spectator.search(match)
-            if not done and player_to_spectator:
+                player_to_spectator = self.player_changed_to_spectator.search(match)
+            if player_to_spectator:
                 done = True
                 pass
             if not done:
-                player_left = player_left_pattern.search(match)
-            if not done and player_left:
+                player_left = self.player_left_pattern.search(match)
+            if player_left:
                 done = True
                 pass
         if len(chat_messages) > chat_pos:
@@ -264,7 +326,10 @@ class Game:
         # socialTab.startChat("username")
         self.driver.execute_script('socialTab.startChat("%s")' % username)
         box = self.driver.find_element_by_id("chatBox-%s" % username)
-        pass
+        chatbox = box.find_element_by_tag_name("textarea")
+        chatbox.send_keys(message)
+        chatbox.send_keys(Keys.ENTER)
+        self.log.chat_out(self.msg_man.get_message("pm_out", [username, message]))
 
     def kick_player(self, username, reason=None):
         reason = reason or self.msg_man.get_message("something")
@@ -277,23 +342,26 @@ class Game:
         elif username != self.username:
             self.chat(self.msg_man.get_message("scorn_admin", [username]))
 
-    def scan_lobby(self):
-        pass
-
     def handle_command(self, user, command):
         print("Command detected: %s" % command)
-        match = re.match("stop|addadmin|pause|help|votekick|voteban|about", command)
+        match = re.match("stop|addadmin|pause|help|votekick|voteban|about|forceevent", command)
         if not match:
-            self.chat("not implemented")
+            self.chat("Unrecognized command")
+            return
+        # admin only commands below
+        if user not in self.admins:
+            self.chat(self.msg_man.get_message("permission_denied",
+                                               [user]))
+            return
+        if command == "forceevent":
+            self.state_timer = 1
+            return
+        if command == "stop":
+            print("stop detected")
+            self.state = -1
             return
         match = re.match("addadmin ([^ ]*)", command)
         if match:
             self.admins.append(match.group(1))
-        elif command == "stop":
-            if user in self.admins:
-                print("stop detected")
-                self.state = -1
-            else:
-                self.chat(self.msg_man.get_message("permission_denied",
-                                                   [user]))
+            return
         pass

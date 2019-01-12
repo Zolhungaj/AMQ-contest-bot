@@ -7,7 +7,8 @@ class MessageManager:
     database = {"greeting_player": 3, "kick_chat": 1, "kick_pm": 1,
                 "banned_word": 1, "permission_denied": 1,
                 "log_chat_out": 1, "something": 1, "hello_world": 1,
-                "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1}
+                "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1,
+                "pm_out": 1, "answer_reveal": 5}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):
@@ -27,7 +28,7 @@ class MessageManager:
                     filename += name + str(self.database[name]-1)
             filename += ".txt"
             with open(self.path + filename) as file:
-                base_text = file.read()
+                base_text = file.read()[:-1]
             for n in range(len(substitutions)):
                 base_text = re.sub(
                     "&%d" % (n+1), str(substitutions[n]), base_text)
