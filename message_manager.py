@@ -8,7 +8,7 @@ class MessageManager:
                 "banned_word": 1, "permission_denied": 1,
                 "log_chat_out": 1, "something": 1, "hello_world": 1,
                 "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1,
-                "pm_out": 1, "answer_reveal": 5, "abort_game": 1}
+                "pm_out": 1, "answer_reveal": 11, "abort_game": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):

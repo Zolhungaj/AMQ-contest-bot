@@ -118,19 +118,24 @@ class WaitingLobby(Lobby):
             is_player = element.find_element_by_class_name("lobbyAvatarTextContainer")
             if "invisible" in is_player.get_attribute("class"):
                 self.players[n] = None
+                self.ready_players[n] = False
             else:
-                level = element.find_element_by_class_name("lobbyAvatarLevel")
-                level = int(level.text)
-                # print(level)
-                name = element.find_element_by_class_name("lobbyAvatarName")
-                username = name.text
-                # print(username)
-                if self.players[n] is None or self.players[n].username != username:
-                    self.players[n] = Player(username, level)
-                ready = element.get_attribute("class")
-                if "lbReady" in ready:
-                    self.ready_players[n] = True
-                else:
+                try:
+                    level = element.find_element_by_class_name("lobbyAvatarLevel")
+                    level = int(level.text)
+                    # print(level)
+                    name = element.find_element_by_class_name("lobbyAvatarName")
+                    username = name.text
+                    # print(username)
+                    if self.players[n] is None or self.players[n].username != username:
+                        self.players[n] = Player(username, level)
+                    ready = element.get_attribute("class")
+                    if "lbReady" in ready:
+                        self.ready_players[n] = True
+                    else:
+                        self.ready_players[n] = False
+                except Exception:
+                    self.players[n] = None
                     self.ready_players[n] = False
 
     def get_unready(self):

@@ -53,7 +53,7 @@ class Game:
         self.state = 0
         self.tick_rate = 0.5
         self.idle_time = 40
-        self.waiting_time = 180
+        self.waiting_time = 90
         self.waiting_time_limit = 0
         self.ready_wait_time = 30
         self.state_timer = int(self.idle_time/self.tick_rate)
@@ -140,8 +140,8 @@ class Game:
                 self.wait_for_ready()
             elif self.state == 3:
                 self.run_game()
-            # elif self.state == 4:
-            #    # self.finish_game()
+            elif self.state == 4:
+                self.finish_game()
             #    # skipController.toggle()
             self.scan_chat()
             self.silent_counter -= 1
@@ -172,7 +172,7 @@ class Game:
             self.set_state_time(self.ready_wait_time)
             self.state = 2
         self.lobby.scan_lobby()
-        self.waiting_time_limit = (self.lobby.player_count()-1)*int(self.waiting_time/(self.max_players-1))
+        self.waiting_time_limit = int((self.lobby.player_count()-1)*(self.waiting_time/(self.max_players-1)))
         if self.lobby.player_count() == 1:
             self.state = 0
             self.set_state_time(self.idle_time)
@@ -223,7 +223,7 @@ class Game:
             for p in self.lobby.players:
                 print("%s: %d" % (p.username, p.score))
             if self.lobby.round == self.lobby.total_rounds:
-                self.finish_game()
+                self.state = 4
                 return
         if self.lobby.player_count < 2:
             self.abort_game()
@@ -234,16 +234,18 @@ class Game:
         time.sleep(1)
         self.driver.execute_script('skipController.toggle()')
         time.sleep(1)
-        self.finish_game()
+        self.state = 4
+
+    def record_game(self):
+        self.state = 5
 
     def finish_game(self):
         # TODO record game
-        while True:
-            try:
-                self.lobby.scan_lobby()
-            except Exception:
-                break
-            time.sleep(self.tick_rate)
+        try:
+            self.lobby.scan_lobby()
+            return
+        except Exception:
+            pass
         self.lobby = WaitingLobby(self.driver, self.max_players)
         self.state = 0
         self.set_state_time(self.idle_time)
