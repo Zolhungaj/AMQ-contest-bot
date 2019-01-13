@@ -292,6 +292,10 @@ class Game:
         chat_pattern = self.chat_pattern
         chat_html = chat_window.get_attribute('innerHTML')
         chat_messages = chat_pattern.findall(chat_html)
+        if len(chat_messages) > chat_pos:
+            self.chat_pos = len(chat_messages)
+        if self.chat_pos > 50:
+            self.clear_chat()
         # print(chat_window.text)
 
         for match in chat_messages[chat_pos:]:
@@ -356,8 +360,10 @@ class Game:
             if player_left:
                 done = True
                 pass
-        if len(chat_messages) > chat_pos:
-            self.chat_pos = len(chat_messages)
+
+    def clear_chat(self):
+        self.chat_pos = 0
+        self.driver.execute_script('document.getElementById("gcMessageContainer").innerHTML = ""')
 
     def detect_banned_words(self, message):
         match = self.banned_word_pattern.search(message.lower())
