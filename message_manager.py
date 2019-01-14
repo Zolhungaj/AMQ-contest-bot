@@ -11,7 +11,8 @@ class MessageManager:
                 "pm_out": 1, "answer_reveal": 11, "abort_game": 1,
                 "help": 1, "help_admin": 1, "help_help": 1, "stop": 1,
                 "unknown_command": 1, "no_songs": 1, "about": 1,
-                "exchange_players": 1, "help_about": 1}
+                "exchange_players": 1, "help_about": 1, "you_answered": 1,
+                "already_done": 1, "no_game_recorded": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):

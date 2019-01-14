@@ -470,7 +470,7 @@ class Game:
             if amount == 0:
                 return
             for msg in self.message_backlog[:amount]:
-                message_player(msg[0], msg[1])
+                self.message_player(msg[0], msg[1])
             self.message_backlog = self.message_backlog[amount:]
         except Exception:
             log_exceptions()
@@ -506,7 +506,7 @@ class Game:
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent", command)
+            match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed", command)
             if not match:
                 self.chat(self.msg_man.get_message("unknown_command"))
                 return
@@ -530,16 +530,24 @@ class Game:
                 self.chat(self.msg_man.get_message("about"))
                 return
             if command.lower() == "missed":
-                if username in self.player_records:
-                    record = self.player_records[username]
+                if user in self.player_records:
+                    record = self.player_records[user]
                     if not record[1]:
                         player = record[0]
                         miss = player.wrong_songs
                         messages = []
                         for s in miss:
-                            messages.append([username, str(s)])
+                            song = s[0]
+                            answer = s[1]
+
+                            messages.append([user, str(song)])
+                            messages.append([user, self.msg_man.get_message("you_answered", [answer])])
                         self.message_backlog += messages
+                    else:
+                        self.chat(self.msg_man.get_message("already_done", [user]))
                     record[1] = True
+                else:
+                    self.chat(self.msg_man.get_message("no_game_recorded", [user]))
                 return
             # admin only commands below
             if user not in self.admins:

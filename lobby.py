@@ -67,7 +67,8 @@ class GameLobby(Lobby):
             song_name = self.driver.find_element_by_id("qpSongName").text
             artist = self.driver.find_element_by_id("qpSongArtist").text
             song_type = self.driver.find_element_by_id("qpSongType").text
-            song = Song(anime_name, song_name, artist, song_type)
+            link = self.driver.find_element_by_id("qpSongVideoLink").get_attribute("href")
+            song = Song(anime_name, song_name, artist, song_type, link)
             self.song_list.append(song)
             self.last_song = song
             for player in self.players:
