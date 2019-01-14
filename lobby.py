@@ -97,6 +97,12 @@ class GameLobby(Lobby):
             if p.note == "":
                 self.player_count += 1
 
+    def active_players(self):
+        return [p for p in self.players if p.note == ""]
+
+    def all_players(self):
+        return self.players
+
     def __repr__(self):
         out = "GameLobby(["
         for p in self.players:
@@ -111,6 +117,7 @@ class WaitingLobby(Lobby):
         self.players = players or [None]*player_max
         self.ready_players = [False]*player_max
         self.player_max = player_max
+        self.player_count = len([p for p in self.players if p is not None])
 
     def scan_lobby(self):
         for n in range(self.player_max):
@@ -137,6 +144,7 @@ class WaitingLobby(Lobby):
                 except Exception:
                     self.players[n] = None
                     self.ready_players[n] = False
+        self.player_count = len([p for p in self.players if p is not None])
 
     def get_unready(self):
         not_ready = []
@@ -151,9 +159,15 @@ class WaitingLobby(Lobby):
     def generateGameLobby(self):
         return GameLobby(self.driver, self.players)
 
-    def player_count(self):
+    def player_count_fun(self):
         res = 0
         for p in self.players:
             if p is not None:
                 res += 1
         return res
+
+    def active_players(self):
+        return [p for p in self.players if p is not None]
+
+    def all_players(self):
+        return self.active_players()

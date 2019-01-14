@@ -15,7 +15,10 @@ def main():
     try:
         game.start()
     except Exception as e:
-        traceback.print_exc()
+        error = traceback.format_exc()
+        print(error)
+        with open("fatalcrash.log", "a", encoding="utf-8") as f:
+            f.write(error)
         game.close()
 
 
