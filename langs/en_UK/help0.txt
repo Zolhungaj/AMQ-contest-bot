@@ -1,1 +1,1 @@
-Common commands: help about
+Common commands: help, about, missed

@@ -75,6 +75,8 @@ class Game:
         self.kick_list = []
         self.silent_counter = int(5/self.tick_rate)
         self.detect_command = re.compile(r"(?i)(?:(?:/)|(?:@"+self.username+r"\s))(.*)")
+        self.message_backlog = []
+        self.player_records = {}
 
     def tick(self):
         time.sleep(self.tick_rate)
@@ -159,6 +161,7 @@ class Game:
                 self.finish_game()
             #    # skipController.toggle()
             self.scan_chat()
+            self.send_backlog()
             self.silent_counter -= 1
             if self.silent_counter < 0:
                 for u in self.kick_list:
@@ -264,6 +267,8 @@ class Game:
 
     def record_game(self):
         try:
+            for p in self.lobby.players:
+                self.player_records[p.username] = [p, False]
             pass
         except Exception:
             log_exceptions()
@@ -459,6 +464,18 @@ class Game:
         except Exception as e:
             log_exceptions()
 
+    def send_backlog(self):
+        try:
+            amount = min(3, len(self.message_backlog))
+            if amount == 0:
+                return
+            for msg in self.message_backlog[:amount]:
+                message_player(msg[0], msg[1])
+            self.message_backlog = self.message_backlog[amount:]
+        except Exception:
+            log_exceptions()
+            self.message_backlog = []
+
     def kick_player(self, username, reason=None):
         try:
             reason = reason or self.msg_man.get_message("something")
@@ -501,7 +518,7 @@ class Game:
             match = re.match(r"(?i)help (.*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent", command)
+                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed", command)
                 if not match:
                     self.chat(self.msg_man.get_message("unknown_command"))
                 elif command == "help":
@@ -511,6 +528,18 @@ class Game:
                 return
             if command.lower() == "about":
                 self.chat(self.msg_man.get_message("about"))
+                return
+            if command.lower() == "missed":
+                if username in self.player_records:
+                    record = self.player_records[username]
+                    if not record[1]:
+                        player = record[0]
+                        miss = player.wrong_songs
+                        messages = []
+                        for s in miss:
+                            messages.append([username, str(s)])
+                        self.message_backlog += messages
+                    record[1] = True
                 return
             # admin only commands below
             if user not in self.admins:
