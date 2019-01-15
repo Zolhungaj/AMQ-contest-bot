@@ -77,6 +77,11 @@ class Game:
         self.detect_command = re.compile(r"(?i)(?:(?:/)|(?:@"+self.username+r"\s))(.*)")
         self.message_backlog = []
         self.player_records = {}
+        self.chattiness = 33 / 100
+        self.recently_used_list = []
+
+    def set_chattiness(self, newpercentage):
+        self.chattiness = newpercentage / 100
 
     def tick(self):
         time.sleep(self.tick_rate)
@@ -248,7 +253,8 @@ class Game:
         if self.lobby.playback and not self.skipped_playback:
             self.skipped_playback = True
             self.driver.execute_script('skipController.toggle()')
-            self.chat(self.msg_man.get_message("answer_reveal", [self.lobby.last_song.anime]))
+            if random.random() < self.chattiness:
+                self.chat(self.msg_man.get_message("answer_reveal", [self.lobby.last_song.anime]))
             for p in self.lobby.players:
                 print("%s: %d" % (p.username, p.score))
             if self.lobby.round == self.lobby.total_rounds:
@@ -506,7 +512,7 @@ class Game:
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed", command)
+            match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
             if not match:
                 self.chat(self.msg_man.get_message("unknown_command"))
                 return
@@ -518,13 +524,33 @@ class Game:
             match = re.match(r"(?i)help (.*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed", command)
+                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
                 if not match:
                     self.chat(self.msg_man.get_message("unknown_command"))
-                elif command == "help":
+                    return
+                if command == "help":
                     self.chat(self.msg_man.get_message("help_help"))
                 elif command == "about":
                     self.chat(self.msg_man.get_message("help_about"))
+                elif command == "list":
+                    self.chat("help list placeholder")
+                elif command == "missed":
+                    self.chat("help missed placeholder")
+                elif user not in admins:
+                    self.chat(self.msg_man.get_message("permission_denied",
+                                                       [user]))
+                elif command == "stop":
+                    self.chat("Usage: stop| PLACEHOLDER: shuts the bot down")
+                elif command == "setchattiness":
+                    self.chat("Usage: setchattiness [0-100]| PLACEHOLDER: sets the likelyhood in percent of [the bot] speaking in certain situations")
+                elif command == "addadmin":
+                    self.chat("Usage: addadmin [username]| PLACEHOLDER: adds a new admin to the bot")
+                elif command == "kick":
+                    self.chat("Usage: kick [username]| PLACEHOLDER: kicks the user and bans them until the bot is restarted")
+                elif command == "ban":
+                    self.chat("Usage: ban [username]| PLACEHOLDER: kicks the user and bans them until the bot is restarted, they are then kicked upon rejoining")
+                elif command == "forceevent":
+                    self.chat("Usage: forceevent| PLACEHOLDER: sets the timer to 1, resulting an immediate activation of time activated events")
                 return
             if command.lower() == "about":
                 self.chat(self.msg_man.get_message("about"))
@@ -549,6 +575,15 @@ class Game:
                 else:
                     self.chat(self.msg_man.get_message("no_game_recorded", [user]))
                 return
+            if command.lower() == "list":
+                if user in self.recently_used_list:
+                    self.chat("You've already done that, @[PLACEHOLDER].")
+                    return
+                else:
+                    song_list = self.lobby.song_list
+                    for s in song_list:
+                        self.messages.append([user, str(s)])
+                    self.chat("The list is being sent to you over PM, @[PLACEHOLDER].")
             # admin only commands below
             if user not in self.admins:
                 self.chat(self.msg_man.get_message("permission_denied",
@@ -561,7 +596,7 @@ class Game:
                 self.chat(self.msg_man.get_message("stop"))
                 self.state = -1
                 return
-            match = re.match("(?i)addadmin ([^ ]*)", command)
+            match = re.match(r"(?i)addadmin\s([^ ]*)", command)
             if match:
                 self.admins.append(match.group(1))
                 return
