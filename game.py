@@ -54,6 +54,19 @@ class Game:
         self.room_password = config[5]
         self.lang = config[6]
         self.banned_word_path = config[7]
+        self.chattiness = int(config[8]) / 100
+        self.banned_players_list = []
+
+        self.banned_players_file = config[9]
+        self.admins_file = config[10]
+        with open(self.admins_file) as f:
+            for line in f.readlines():
+                self.admins.append(line[:-1])
+        print(self.admins)
+        with open(self.banned_players_file) as f:
+            for line in f.readlines():
+                self.banned_players_list.append(line[:-1])
+        print(self.banned_players_list)
         with open(self.banned_word_path) as f:
             list = f.read().split("\n")[:-1]
             self.banned_word_pattern = re.compile(r"\b(" + "|".join(list) + ")")
@@ -77,8 +90,8 @@ class Game:
         self.detect_command = re.compile(r"(?i)(?:(?:/)|(?:@"+self.username+r"\s))(.*)")
         self.message_backlog = []
         self.player_records = {}
-        self.chattiness = 33 / 100
         self.recently_used_list = []
+        self.last_round_list = None
 
     def set_chattiness(self, newpercentage):
         self.chattiness = newpercentage / 100
@@ -275,7 +288,9 @@ class Game:
         try:
             for p in self.lobby.players:
                 self.player_records[p.username] = [p, False]
-            pass
+            self.last_round_list = self.lobby.song_list
+            self.recently_used_list = []
+            self.chat("Great work everyone! If you want to train on your missed songs do /missed, and I'll send you a list :)")
         except Exception:
             log_exceptions()
         self.state = 5
@@ -482,9 +497,22 @@ class Game:
             log_exceptions()
             self.message_backlog = []
 
-    def kick_player(self, username, reason=None):
+    def ban_player(self, username, reason=None, issuer=None):
         try:
             reason = reason or self.msg_man.get_message("something")
+            issuer = issuer or self.msg_man.get_message("system")
+            with open(self.banned_players_file, "a", encoding="utf-8") as f:
+                f.write(self.msg_man.get_message("ban_comment", [username, issuer, reason])+"\n")
+            reason = self.msg_man.get_message("banned_for", [reason])
+            self.kick_player(username, reason, issuer)
+
+        except Exception:
+            log_exceptions()
+
+    def kick_player(self, username, reason=None, issuer=None):
+        try:
+            reason = reason or self.msg_man.get_message("something")
+            issuer = issuer or self.msg_man.get_message("system")
             if username not in self.admins:
                 if self.state < 3:
                     self.lobby.remove_player(username, reason)
@@ -521,7 +549,7 @@ class Game:
                 if user in self.admins:
                     self.chat(self.msg_man.get_message("help_admin"))
                 return
-            match = re.match(r"(?i)help (.*)", command)
+            match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
                 match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
@@ -533,10 +561,10 @@ class Game:
                 elif command == "about":
                     self.chat(self.msg_man.get_message("help_about"))
                 elif command == "list":
-                    self.chat("help list placeholder")
+                    self.chat("Sends you a list of the previous game the bot ran, can only be used once per game PLACEHOLDER")
                 elif command == "missed":
-                    self.chat("help missed placeholder")
-                elif user not in admins:
+                    self.chat("Send you a list of songs you missed in the last game you played with the bot, can only be used once per game PLACEHOLDER")
+                elif user not in self.admins:
                     self.chat(self.msg_man.get_message("permission_denied",
                                                        [user]))
                 elif command == "stop":
@@ -546,9 +574,9 @@ class Game:
                 elif command == "addadmin":
                     self.chat("Usage: addadmin [username]| PLACEHOLDER: adds a new admin to the bot")
                 elif command == "kick":
-                    self.chat("Usage: kick [username]| PLACEHOLDER: kicks the user and bans them until the bot is restarted")
+                    self.chat("Usage: kick [username] <reason>| PLACEHOLDER: kicks the user and bans them until the bot is restarted")
                 elif command == "ban":
-                    self.chat("Usage: ban [username]| PLACEHOLDER: kicks the user and bans them until the bot is restarted, they are then kicked upon rejoining")
+                    self.chat("Usage: ban [username] <reason>| PLACEHOLDER: kicks the user and bans them until the bot is restarted, they are then kicked upon rejoining")
                 elif command == "forceevent":
                     self.chat("Usage: forceevent| PLACEHOLDER: sets the timer to 1, resulting an immediate activation of time activated events")
                 return
@@ -576,14 +604,19 @@ class Game:
                     self.chat(self.msg_man.get_message("no_game_recorded", [user]))
                 return
             if command.lower() == "list":
-                if user in self.recently_used_list:
+                if self.last_round_list is None:
+                    self.chat("No games registered yet, @[PLACEHOLDER].")
+                elif user in self.recently_used_list:
                     self.chat("You've already done that, @[PLACEHOLDER].")
-                    return
                 else:
-                    song_list = self.lobby.song_list
+                    song_list = self.last_round_list
+                    messages = []
                     for s in song_list:
-                        self.messages.append([user, str(s)])
+                        messages.append([user, str(s)])
+                    self.message_backlog += messages
                     self.chat("The list is being sent to you over PM, @[PLACEHOLDER].")
+                    self.recently_used_list.append(user)
+                return
             # admin only commands below
             if user not in self.admins:
                 self.chat(self.msg_man.get_message("permission_denied",
@@ -596,10 +629,31 @@ class Game:
                 self.chat(self.msg_man.get_message("stop"))
                 self.state = -1
                 return
-            match = re.match(r"(?i)addadmin\s([^ ]*)", command)
+            match = re.match(r"(?i)addadmin\s@?([^ ]*)", command)
             if match:
                 self.admins.append(match.group(1))
+                with open(self.admins_file, "a", encoding="utf-8") as f:
+                    f.write(match.group(1) + "\n")
                 return
+            match = re.match(r"(?i)kick\s@?([^ ]*)(?:\s(.*))", command)
+            if match:
+                username = match.group(1)
+                reason = match.group(2)
+                if reason == "":
+                    reason = None
+                self.kick_player(username, reason, user)
+                return
+            match = re.match(r"(?i)ban\s@?([^ ]*)(?:\s(.*))?", command)
+            if match:
+                username = match.group(1)
+                reason = match.group(2)
+                if reason == "":
+                    reason = None
+                self.ban_player(username, reason, user)
+                return
+            match = re.match(r"(?i)setchattiness\s(-?\d+)", command)
+            if match:
+                self.set_chattiness(int(match.group(1)))
             pass
         except Exception:
             log_exceptions()

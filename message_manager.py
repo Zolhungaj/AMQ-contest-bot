@@ -8,11 +8,12 @@ class MessageManager:
                 "banned_word": 1, "permission_denied": 1,
                 "log_chat_out": 1, "something": 1, "hello_world": 1,
                 "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1,
-                "pm_out": 1, "answer_reveal": 11, "abort_game": 1,
+                "pm_out": 1, "answer_reveal": 26, "abort_game": 1,
                 "help": 1, "help_admin": 1, "help_help": 1, "stop": 1,
                 "unknown_command": 1, "no_songs": 1, "about": 1,
                 "exchange_players": 1, "help_about": 1, "you_answered": 1,
-                "already_done": 1, "no_game_recorded": 1}
+                "already_done": 1, "no_game_recorded": 1, "ban_comment": 1,
+                "banned_for": 1, "system": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):
@@ -38,7 +39,7 @@ class MessageManager:
                     "&%d" % (n+1), str(substitutions[n]), base_text)
             return base_text
         except Exception:
-            error = traceback.print_exc()
+            error = traceback.format_exc()
             print(error)
             with open("message_manager_fail.log", "a", encoding="utf-8") as f:
                 f.write(error)
