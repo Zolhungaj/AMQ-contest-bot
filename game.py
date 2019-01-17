@@ -201,8 +201,11 @@ class Game:
 
     def wait_for_players(self):
         self.state_timer -= 1
-        if self.state_timer % (int(10/self.tick_rate)) == 0:
-            self.chat(self.msg_man.get_message("starting_in", [int((self.state_timer-self.waiting_time_limit)*self.tick_rate)]))
+        time_left = self.state_timer - self.waiting_time_limit
+        if time_left % (int(10/self.tick_rate)) == 0 or time_left <= 0:
+            if time_left < 0:
+                time_left = 0
+            self.chat(self.msg_man.get_message("starting_in", [int((time_left)*self.tick_rate)]))
         if self.state_timer <= self.waiting_time_limit:
             self.chat(self.msg_man.get_message("get_ready"))
             for p in self.lobby.get_unready():
@@ -211,7 +214,7 @@ class Game:
             self.state = 2
             return
         self.lobby.scan_lobby()
-        self.waiting_time_limit = int((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)))
+        self.waiting_time_limit = int(((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)))/self.tick_rate) - 10
         if self.lobby.player_count == 1:
             self.state = 0
             self.set_state_time(self.idle_time)
