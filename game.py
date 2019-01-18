@@ -555,7 +555,7 @@ class Game:
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
+                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
                 if not match:
                     self.chat(self.msg_man.get_message("unknown_command"))
                     return
@@ -619,6 +619,14 @@ class Game:
                     self.message_backlog += messages
                     self.chat("The list is being sent to you over PM, @[PLACEHOLDER].")
                     self.recently_used_list.append(user)
+                return
+            match = re.match(r"(?i)answer\s(.*)\s", command)
+            if match:
+                self.chat("not implemented")
+                return
+            match = re.match(r"(?i)vote\s\d+\s", command)
+            if match:
+                self.chat("not implemented")
                 return
             # admin only commands below
             if user not in self.admins:
