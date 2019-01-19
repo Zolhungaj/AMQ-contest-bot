@@ -214,7 +214,7 @@ class Game:
             self.state = 2
             return
         self.lobby.scan_lobby()
-        self.waiting_time_limit = int(((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)))/self.tick_rate) - 10
+        self.waiting_time_limit = int(((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)) - 10)/self.tick_rate)
         if self.lobby.player_count == 1:
             self.state = 0
             self.set_state_time(self.idle_time)
