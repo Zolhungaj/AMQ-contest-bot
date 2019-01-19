@@ -8,7 +8,7 @@ class MessageManager:
                 "banned_word": 1, "permission_denied": 1,
                 "log_chat_out": 1, "something": 1, "hello_world": 1,
                 "idle": 1, "get_ready": 1, "scorn_admin": 1, "starting_in": 1,
-                "pm_out": 1, "answer_reveal": 26, "abort_game": 1,
+                "pm_out": 1, "answer_reveal": 33, "abort_game": 1,
                 "help": 1, "help_admin": 1, "help_help": 1, "stop": 1,
                 "unknown_command": 1, "no_songs": 1, "about": 1,
                 "exchange_players": 1, "help_about": 1, "you_answered": 1,

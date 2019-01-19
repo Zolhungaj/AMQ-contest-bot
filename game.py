@@ -77,7 +77,7 @@ class Game:
         self.idle_time = 40
         self.waiting_time = 90
         self.waiting_time_limit = 0
-        self.ready_wait_time = 30
+        self.ready_wait_time = 15
         self.state_timer = int(self.idle_time/self.tick_rate)
         self.log = Logger()
         self.chat_pos = 0
@@ -101,6 +101,11 @@ class Game:
 
     def set_state_time(self, new_time):
         self.state_timer = int(new_time/self.tick_rate)
+
+    def set_state_idle(self):
+        self.state = 0
+        self.set_state_time(self.idle_time)
+        self.chat(self.msg_man.get_message("idle"))
 
     def close(self):
         self.driver.execute_script("options.logout();")
@@ -180,6 +185,7 @@ class Game:
             #    # skipController.toggle()
             self.scan_chat()
             self.send_backlog()
+            self.state_timer -= 1
             self.silent_counter -= 1
             if self.silent_counter < 0:
                 for u in self.kick_list:
@@ -189,7 +195,6 @@ class Game:
         self.close()
 
     def idle(self):
-        self.state_timer -= 1
         if self.state_timer == 0:
             self.chat(self.msg_man.get_message("idle"))
             self.set_state_time(self.idle_time)
@@ -200,7 +205,6 @@ class Game:
             self.waiting_time_limit = 0
 
     def wait_for_players(self):
-        self.state_timer -= 1
         time_left = self.state_timer - self.waiting_time_limit
         if time_left % (int(10/self.tick_rate)) == 0 or time_left <= 0:
             if time_left < 0:
@@ -216,16 +220,14 @@ class Game:
         self.lobby.scan_lobby()
         self.waiting_time_limit = int(((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)) - 10)/self.tick_rate)
         if self.lobby.player_count == 1:
-            self.state = 0
-            self.set_state_time(self.idle_time)
+            self.set_state_idle()
 
     def wait_for_ready(self):
         print("wait for ready")
-        self.state_timer -= 1
         self.lobby.scan_lobby()
+        time_remaining = self.state_timer*self.tick_rate
         if self.lobby.player_count == 1:
-            self.state = 0
-            self.set_state_time(self.idle_time)
+            self.set_state_idle()
             return
         if self.lobby.all_ready():
             self.start_game()
@@ -234,6 +236,11 @@ class Game:
         elif self.state_timer == 0:
             for p in self.lobby.get_unready():
                 self.move_to_spectator(p.username)
+        elif (time_remaining) % 1 == 0:
+            if (time_remaining) < 0:
+                self.chat(str(int(time_remaining+10))+"!")
+            else:
+                self.chat(str(int(time_remaining)))
 
     def start_game(self):
         self.driver.execute_script("lobby.fireMainButtonEvent();")
@@ -255,8 +262,7 @@ class Game:
             self.select_quality("Sound")
             self.lobby = new_lobby
         except Exception:
-            self.state = 0
-            self.set_state_time(self.idle_time)
+            self.set_state_idle()
             self.chat(self.msg_man.get_message("no_songs"))
             self.exchange_players()
 
