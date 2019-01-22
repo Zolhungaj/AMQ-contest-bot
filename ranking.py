@@ -24,11 +24,14 @@ class Ranking:
         self.path = path
         self.players = {}  # memoization
 
+    def get_file_path(self, username):
+        return self.path+username+".amq"
+
     def get_player_stats(self, username):
         if username in self.players:
             return self.players[username]
         try:
-            file = open(self.path+username, "r", encoding="utf-8")
+            file = open(get_file_path(username), "r", encoding="utf-8")
             data = file.read()
             self.players[username] = data
             return data
@@ -38,7 +41,7 @@ class Ranking:
             file.close()
 
     def save_player(self, username, data):
-        with open(self.path+username, "w", encoding="utf-8") as f:
+        with open(get_file_path(username), "w", encoding="utf-8") as f:
             f.write(data)
             self.players[username] = data
 
