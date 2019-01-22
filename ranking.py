@@ -31,7 +31,7 @@ class Ranking:
         if username in self.players:
             return self.players[username]
         try:
-            file = open(get_file_path(username), "r", encoding="utf-8")
+            file = open(self.get_file_path(username), "r", encoding="utf-8")
             data = file.read()
             self.players[username] = data
             return data
@@ -41,7 +41,7 @@ class Ranking:
             file.close()
 
     def save_player(self, username, data):
-        with open(get_file_path(username), "w", encoding="utf-8") as f:
+        with open(self.get_file_path(username), "w", encoding="utf-8") as f:
             f.write(data)
             self.players[username] = data
 
