@@ -320,6 +320,8 @@ class Game:
         players = self.lobby.all_players()
         active_players = self.lobby.active_players()
         queue_size = int(self.driver.find_element_by_id("gcQueueCount").text)
+        if queue_size == 0:
+            return
         queue_size += (len(players)-len(active_players))  # original size
         if queue_size < self.max_players-len(active_players):
             return
