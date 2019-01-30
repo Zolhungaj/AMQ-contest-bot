@@ -13,28 +13,28 @@ class Database:
     def start(self):
         c = self.conn.cursor()
 
-        c.execute("""CREATE TABLE IF NOT EXISTS players(
+        c.execute("""CREATE TABLE IF NOT EXISTS player(
         id INTEGER PRIMARY KEY,
         username TEXT UNIQUE NOT NULL
         );""")
-        c.execute("""CREATE TABLE IF NOT EXISTS messages(
+        c.execute("""CREATE TABLE IF NOT EXISTS message(
         id INTEGER PRIMARY KEY,
         player_id INTEGER,
         time TEXT,
         content TEXT,
-        FOREIGN KEY(player_id) REFERENCES players(id)
+        FOREIGN KEY(player_id) REFERENCES player(id)
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS banned(
         player_id INTEGER PRIMARY KEY,
         reason TEXT,
         banner INTEGER NOT NULL,
-        FOREIGN KEY(player_id) REFERENCES players(id),
-        FOREIGN KEY(banner) REFERENCES players(id)
+        FOREIGN KEY(player_id) REFERENCES player(id),
+        FOREIGN KEY(banner) REFERENCES player(id)
         );""")
         c.execute("""CREATE TABLE IF NOT EXISTS elo(
         player_id INTEGER PRIMARY KEY,
         rating INTEGER NOT NULL,
-        FOREIGN KEY(player_id) REFERENCES players(id)
+        FOREIGN KEY(player_id) REFERENCES player(id)
         )""")
         c.execute("""CREATE TABLE game(
         id INTEGER PRIMARY KEY
@@ -63,14 +63,20 @@ class Database:
         PRIMARY KEY(game_id, ordinal),
         FOREIGN KEY(game_id) REFERENCES game(id),
         FOREIGN KEY(song_id) REFERENCES song(id)
-
         )""")
+        c.execute("""CREATE TABLE valour(
+        player_id INTEGER PRIMARY KEY,
+        referer_id INTEGER,
+        FOREIGN KEY(player_id) REFERENCES player(id),
+        FOREIGN KEY(referer_id) REFERENCES player(id)
+        )
+        """)
         c.close()
         self.conn.commit()
 
     def initalize_base(self):
         try:
-            self.conn.execute("""INSERT INTO players VALUES(
+            self.conn.execute("""INSERT INTO player VALUES(
             0,
             '<System>'
             );""")
@@ -83,7 +89,7 @@ class Database:
         # if id is not None:
         #    return id
         try:
-            self.conn.execute("""INSERT INTO players VALUES(
+            self.conn.execute("""INSERT INTO player VALUES(
             NULL,
             (?)
             )""", (username,))
@@ -94,7 +100,7 @@ class Database:
 
     def get_player_id(self, username):
         c = self.conn.cursor()
-        c.execute("""SELECT id FROM players WHERE username=(?)""", (username,))
+        c.execute("""SELECT id FROM player WHERE username=(?)""", (username,))
         result = c.fetchone()
         c.close()
         if result is None:
@@ -111,7 +117,7 @@ class Database:
     def save_message(self, username, message):
         player_id = self.get_or_create_player_id(username)
         self.conn.execute("""
-        INSERT INTO messages VALUES(
+        INSERT INTO message VALUES(
         NULL,
         (?),
         DATETIME('now'),
@@ -136,9 +142,9 @@ class Database:
         query = """
         SELECT p.username, b.reason, p2.username
         FROM banned AS b
-        JOIN players p
+        JOIN player p
             ON p.id = b.player_id
-        JOIN players p2
+        JOIN player p2
             ON p2.id = b.banner
         """
         if username is not None:
@@ -154,6 +160,45 @@ class Database:
         else:
             return self.conn.execute(query+";").fetchall()
 
+    def add_valour(self, username, referer=None):
+        if referer is not None:
+            if not self.has_valour(referer):
+                return False
+        try:
+            self.conn.execute("""INSERT INTO valour VALUES(
+            ?,
+            ?
+            )""", (self.get_player_id(username), self.get_player_id(referer),))
+            self.conn.commit()
+        except Exception:
+            return False
+        return True
+
+    def has_valour(self, username):
+        res = self.conn.execute("""
+        SELECT player_id
+        FROM valour
+        WHERE player_id = ?""", (self.get_player_id(username),))
+        return res.fetchone() is not None
+
+    def valour_readable(self):
+        res = self.conn.execute("""
+        WITH RECURSIVE record (lvl, player_id, referer_id) AS
+        (SELECT 0, v.player_id AS player_id, v.referer_id AS referer_id
+            FROM valour v
+                WHERE v.referer_id IS NULL
+        UNION ALL
+        SELECT r.lvl+1, v.player_id, v.referer_id
+            FROM record AS r
+                JOIN valour v
+                    ON r.player_id = v.referer_id)
+        SELECT r.lvl, p.username, p2.username
+        FROM record AS r
+        JOIN player AS p on p.id = r.player_id
+        LEFT OUTER JOIN player as p2 on p2.id = r.referer_id
+        ORDER BY r.lvl, p.username, p2.username""")
+        return res.fetchall()
+
 
 if __name__ == "__main__":
     # a basic test of the functions
@@ -166,6 +211,10 @@ if __name__ == "__main__":
     database.save_message("player3", "message1")
     database.ban_player("player4")
     database.ban_player("player3", "reason1", "player2")
+    assert database.add_valour("player4")
+    assert not database.add_valour("player5")
+    assert database.add_valour("player3", "player4")
+    print(database.valour_readable())
     print(database.ban_readable())
     print(database.ban_readable("player4"))
     print(database.ban_readable(banner="player2"))
