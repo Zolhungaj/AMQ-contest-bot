@@ -253,6 +253,7 @@ class Game:
         except Exception:
             pass
         try:
+            time.sleep(2)
             new_lobby = self.lobby.generateGameLobby()
             self.state = 3
             self.last_round = -1
