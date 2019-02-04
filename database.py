@@ -56,7 +56,7 @@ class Database:
         artist TEXT,
         link TEXT
         )""")
-        c.execute("""CREATE TABLE gametosong(
+        c.execute("""CREATE TABLE IF NOT EXISTS gametosong(
         game_id INTEGER NOT NULL,
         song_id INTEGER NOT NULL,
         ordinal INTEGER NOT NULL,
@@ -64,11 +64,26 @@ class Database:
         FOREIGN KEY(game_id) REFERENCES game(id),
         FOREIGN KEY(song_id) REFERENCES song(id)
         )""")
-        c.execute("""CREATE TABLE valour(
+        c.execute("""CREATE TABLE IF NOT EXISTS valour(
         player_id INTEGER PRIMARY KEY,
+        surplus INTEGER NOT NULL,
         referer_id INTEGER,
         FOREIGN KEY(player_id) REFERENCES player(id),
         FOREIGN KEY(referer_id) REFERENCES player(id)
+        )
+        """)
+        c.execute("""CREATE TABLE IF NOT EXISTS administrator(
+        player_id INTEGER PRIMARY KEY,
+        source INTEGER,
+        FOREIGN KEY(player_id) REFERENCES player(id),
+        FOREIGN KEY(source) REFERENCES player(id)
+        )
+        """)
+        c.execute("""CREATE TABLE IF NOT EXISTS moderator(
+        player_id INTEGER PRIMARY KEY,
+        source INTEGER,
+        FOREIGN KEY(player_id) REFERENCES player(id),
+        FOREIGN KEY(source) REFERENCES player(id)
         )
         """)
         c.close()
@@ -81,7 +96,21 @@ class Database:
             '<System>'
             );""")
         except Exception as e:
-            print("base initialize failed")
+            pass
+        try:
+            self.conn.execute("""INSERT INTO administrator VALUES(
+            0,
+            0
+            );""")
+        except Exception as e:
+            pass
+        try:
+            self.conn.execute("""INSERT INTO moderator VALUES(
+            0,
+            0
+            );""")
+        except Exception as e:
+            pass
         self.conn.commit()
 
     def create_player(self, username):
@@ -137,6 +166,15 @@ class Database:
         (?),
         (?)
         )""", (player_id, reason, banner_id,))
+        self.conn.commit()
+
+    def unban_player(self, username):
+        player_id = self.get_player_id(username)
+        self.conn.execute("""
+        DELETE FROM banned
+        WHERE player_id = ?
+        """, (player_id,))
+        self.conn.commit()
 
     def ban_readable(self, username=None, banner=None):
         query = """
@@ -160,16 +198,71 @@ class Database:
         else:
             return self.conn.execute(query+";").fetchall()
 
+    def add_administrator(self, username, source=None):
+        self.add_moderator(username, source)
+        player_id = self.get_or_create_player_id(username)
+        source_id = self.get_player_id(source) or 0
+        try:
+            self.conn.execute("""INSERT INTO administrator VALUES(
+            ?,
+            ?
+            )""", (player_id, source_id,))
+        except Exception:
+            return False
+        self.conn.commit()
+        return True
+
+    def remove_administrator(self, username):
+        player_id = self.get_player_id(username)
+        self.conn.execute("""DELETE FROM administrator
+        WHERE player_id = ?""", (player_id,))
+        self.conn.commit()
+
+    def is_administrator(self, username):
+        res = self.conn.execute("""
+        SELECT *
+        FROM administrator
+        WHERE player_id = ?""", (self.get_player_id(username),))
+        return res.fetchone() is not None
+
+    def add_moderator(self, username, source=None):
+        player_id = self.get_or_create_player_id(username)
+        source_id = self.get_player_id(source) or 0
+        try:
+            self.conn.execute("""INSERT INTO administrator VALUES(
+            ?,
+            ?
+            )""", (player_id, source_id,))
+        except Exception:
+            return False
+        self.conn.commit()
+        return True
+
+    def remove_moderator(self, username):
+        player_id = self.get_player_id(username)
+        self.conn.execute("""DELETE FROM moderator
+        WHERE player_id = ?""", (player_id,))
+        self.conn.commit()
+
+    def is_moderator(self, username):
+        res = self.conn.execute("""
+        SELECT *
+        FROM moderator
+        WHERE player_id = ?""", (self.get_player_id(username),))
+        return res.fetchone() is not None
+
     def add_valour(self, username, referer=None):
         if referer is not None:
-            if not self.has_valour(referer):
+            if not self.get_valour_surplus(referer) > 0:
                 return False
         try:
             self.conn.execute("""INSERT INTO valour VALUES(
             ?,
+            2,
             ?
             )""", (self.get_player_id(username), self.get_player_id(referer),))
             self.conn.commit()
+            self.change_valour_surplus(referer, -1)
         except Exception:
             return False
         return True
@@ -180,6 +273,25 @@ class Database:
         FROM valour
         WHERE player_id = ?""", (self.get_player_id(username),))
         return res.fetchone() is not None
+
+    def get_valour_surplus(self, username):
+        if self.has_valour(username):
+            res = self.conn.execute("""
+            SELECT surplus
+            FROM valour
+            WHERE player_id = ?
+            """, (self.get_player_id(username),))
+            return res.fetchone()[0]
+        else:
+            return -1
+
+    def change_valour_surplus(self, username, change):
+        new_surplus = self.get_valour_surplus(username) + change
+        self.conn.execute("""UPDATE valour
+        SET surplus = ?
+        WHERE player_id = ?
+        """, (new_surplus, self.get_player_id(username),))
+        self.conn.commit()
 
     def valour_readable(self):
         res = self.conn.execute("""
@@ -211,9 +323,14 @@ if __name__ == "__main__":
     database.save_message("player3", "message1")
     database.ban_player("player4")
     database.ban_player("player3", "reason1", "player2")
+    database.create_player("player9")
     assert database.add_valour("player4")
     assert not database.add_valour("player5")
     assert database.add_valour("player3", "player4")
+    assert not database.add_valour("player2", "player1")
+    assert database.add_valour("player1", "player3")
+    assert database.add_valour("player2", "player4")
+    assert not database.add_valour("player6", "player4")
     print(database.valour_readable())
     print(database.ban_readable())
     print(database.ban_readable("player4"))
