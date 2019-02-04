@@ -92,6 +92,7 @@ class Game:
         self.player_records = {}
         self.recently_used_list = []
         self.last_round_list = None
+        self.delay = 3
 
     def set_chattiness(self, newpercentage):
         self.chattiness = newpercentage / 100
@@ -130,27 +131,27 @@ class Game:
         password_input.send_keys(password)
         login_button = driver.find_element_by_id("loginButton")
         login_button.click()
-        time.sleep(2)
+        time.sleep(self.delay)
         play = driver.find_element_by_id("mpPlayButton")
         play.click()
-        time.sleep(2)
+        time.sleep(self.delay)
         host = driver.find_element_by_id("roomBrowserHostButton")
         host.click()
-        time.sleep(2)
+        time.sleep(self.delay)
         driver.execute_script("hostModal.selectStandard();")
         # driver.execute_script("hostModal.selectQD();")
-        time.sleep(2)
+        time.sleep(self.delay)
         driver.execute_script("hostModal.toggleLoadContainer();")
-        time.sleep(2)
+        time.sleep(self.delay)
         load = driver.find_element_by_id("mhLoadFromSaveCodeButton")
         load.click()
-        time.sleep(2)
+        time.sleep(self.delay)
         load_code_entry = driver.find_element_by_class_name("swal2-input")
         load_code_entry.send_keys(code)
         load_confirm = driver.find_element_by_class_name(
             "swal2-confirm")
         load_confirm.click()
-        time.sleep(2)
+        time.sleep(self.delay)
         if room_password != "":
             private_button = driver.find_element_by_id("mhPrivateRoom")
             box = driver.find_element_by_class_name("customCheckbox")
@@ -158,7 +159,7 @@ class Game:
             actions.move_to_element(box)
             actions.click(private_button)
             actions.perform()
-            time.sleep(2)
+            time.sleep(self.delay)
             room_password_input = driver.find_element_by_id("mhPasswordInput")
             room_password_input.send_keys(room_password)
         room_name_input = driver.find_element_by_id("mhRoomNameInput")
@@ -203,6 +204,20 @@ class Game:
             self.state = 1
             self.set_state_time(self.waiting_time)
             self.waiting_time_limit = 0
+        self.check_if_active_game()
+
+    def check_if_active_game(self):
+        try:
+            new_lobby = self.lobby.generateGameLobby()
+            new_lobby.scan_lobby()
+            new_lobby.verify_players()
+            self.mute_sound()
+            self.select_quality("Sound")
+            self.state = 3
+            self.last_round = -1
+            self.lobby = new_lobby
+        except Exception:
+            pass
 
     def wait_for_players(self):
         time_left = self.state_timer - self.waiting_time_limit
@@ -244,22 +259,23 @@ class Game:
 
     def start_game(self):
         self.driver.execute_script("lobby.fireMainButtonEvent();")
-        time.sleep(2)
+        time.sleep(self.delay)
         try:
             pop_up = self.driver.find_element_by_class_name("swal2-container")
             accept = pop_up.find_element_by_class_name("swal2-confirm")
             accept.click()
-            time.sleep(2)
+            time.sleep(self.delay)
         except Exception:
             pass
         try:
+            time.sleep(self.delay)
             new_lobby = self.lobby.generateGameLobby()
-            self.state = 3
-            self.last_round = -1
             new_lobby.scan_lobby()
             new_lobby.verify_players()
             self.mute_sound()
             self.select_quality("Sound")
+            self.state = 3
+            self.last_round = -1
             self.lobby = new_lobby
         except Exception:
             self.set_state_idle()
