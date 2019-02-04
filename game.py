@@ -609,6 +609,8 @@ class Game:
                 return
             if command.lower() == "about":
                 self.chat(self.msg_man.get_message("about"))
+                if random.random()*100 > 90:
+                    self.chat(self.msg_man.get_message("about_joke_intro")+" "+self.msg_man.get_message("about_joke"))
                 return
             if command.lower() == "missed":
                 if user in self.player_records:

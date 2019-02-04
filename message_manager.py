@@ -13,7 +13,8 @@ class MessageManager:
                 "unknown_command": 1, "no_songs": 1, "about": 1,
                 "exchange_players": 1, "help_about": 1, "you_answered": 1,
                 "already_done": 1, "no_game_recorded": 1, "ban_comment": 1,
-                "banned_for": 1, "system": 1}
+                "banned_for": 1, "system": 1, "about_joke_intro": 1,
+                "about_joke": 3}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):
