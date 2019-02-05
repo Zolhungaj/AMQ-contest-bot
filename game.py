@@ -75,7 +75,7 @@ class Game:
         self.state = 0
         self.tick_rate = 0.5
         self.idle_time = 40
-        self.waiting_time = 90
+        self.waiting_time = 45
         self.waiting_time_limit = 0
         self.ready_wait_time = 15
         self.state_timer = int(self.idle_time/self.tick_rate)
@@ -315,7 +315,7 @@ class Game:
                 self.player_records[p.username] = [p, False]
             self.last_round_list = self.lobby.song_list
             self.recently_used_list = []
-            self.chat("Great work everyone! If you want to train on your missed songs do /missed, and I'll send you a list :)")
+            self.chat(self.msg_man.get_message("game_complete"))
         except Exception:
             log_exceptions()
         self.state = 5
@@ -462,7 +462,7 @@ class Game:
                     if self.detect_banned_words(username):
                         self.kick_player(username, self.msg_man.get_message("banned_word"))
                     else:
-                        self.chat(self.msg_man.get_message("greeting_player",
+                        self.chat(self.msg_man.get_message("greeting_spectator",
                                                            [join_as_spectator.group(1)]))
                     done = True
                     pass
@@ -588,24 +588,25 @@ class Game:
                 elif command == "about":
                     self.chat(self.msg_man.get_message("help_about"))
                 elif command == "list":
-                    self.chat("Sends you a list of the previous game the bot ran, can only be used once per game PLACEHOLDER")
+                    self.chat(self.msg_man.get_message("help_list"))
                 elif command == "missed":
-                    self.chat("Send you a list of songs you missed in the last game you played with the bot, can only be used once per game PLACEHOLDER")
+                    self.chat(self.msg_man.get_message("help_missed"))
                 elif user not in self.admins:
                     self.chat(self.msg_man.get_message("permission_denied",
                                                        [user]))
                 elif command == "stop":
-                    self.chat("Usage: stop| PLACEHOLDER: shuts the bot down")
+                    self.chat(self.msg_man.get_message("help_stop"))
                 elif command == "setchattiness":
-                    self.chat("Usage: setchattiness [0-100]| PLACEHOLDER: sets the likelyhood in percent of [the bot] speaking in certain situations")
+                    self.chat(self.msg_man.get_message("help_setchattiness",
+                                                       [self.username]))
                 elif command == "addadmin":
-                    self.chat("Usage: addadmin [username]| PLACEHOLDER: adds a new admin to the bot")
+                    self.chat(self.msg_man.get_message("help_addadmin"))
                 elif command == "kick":
-                    self.chat("Usage: kick [username] <reason>| PLACEHOLDER: kicks the user and bans them until the bot is restarted")
+                    self.chat(self.msg_man.get_message("help_kick"))
                 elif command == "ban":
-                    self.chat("Usage: ban [username] <reason>| PLACEHOLDER: kicks the user and bans them until the bot is restarted, they are then kicked upon rejoining")
+                    self.chat(self.msg_man.get_message("help_ban"))
                 elif command == "forceevent":
-                    self.chat("Usage: forceevent| PLACEHOLDER: sets the timer to 1, resulting an immediate activation of time activated events")
+                    self.chat(self.msg_man.get_message("help_forceevent"))
                 return
             if command.lower() == "about":
                 self.chat(self.msg_man.get_message("about"))
@@ -634,16 +635,16 @@ class Game:
                 return
             if command.lower() == "list":
                 if self.last_round_list is None:
-                    self.chat("No games registered yet, @[PLACEHOLDER].")
+                    self.chat(self.msg_man.get_message("list_fail_no_games", [user]))
                 elif user in self.recently_used_list:
-                    self.chat("You've already done that, @[PLACEHOLDER].")
+                    self.chat(self.msg_man.get_message("list_fail_already_done", [user]))
                 else:
                     song_list = self.last_round_list
                     messages = []
                     for s in song_list:
                         messages.append([user, str(s)])
                     self.message_backlog += messages
-                    self.chat("The list is being sent to you over PM, @[PLACEHOLDER].")
+                    self.chat(self.msg_man.get_message("list_success", [user]))
                     self.recently_used_list.append(user)
                 return
             match = re.match(r"(?i)answer\s(.*)\s", command)

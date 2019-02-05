@@ -1,0 +1,1 @@
+Usage: ban [username] <reason>| Kicks the user and bans them until the bot is restarted, they are then kicked upon rejoining.

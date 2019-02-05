@@ -14,7 +14,11 @@ class MessageManager:
                 "exchange_players": 1, "help_about": 1, "you_answered": 1,
                 "already_done": 1, "no_game_recorded": 1, "ban_comment": 1,
                 "banned_for": 1, "system": 1, "about_joke_intro": 1,
-                "about_joke": 3}
+                "about_joke": 3, "greeting_spectator": 1, "help_addadmin": 1,
+                "help_list": 1, "help_missing": 1, "help_stop": 1,
+                "help_setchattiness": 1, "help_ban": 1, "help_kick": 1,
+                "help_forceevent": 1, "list_success": 1, "game_complete": 1,
+                "list_fail_no_games": 1, "list_fail_already_done": 1, }
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):

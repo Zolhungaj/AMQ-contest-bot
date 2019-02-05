@@ -1,0 +1,1 @@
+Usage: forceevent| Sets the timer to 1, resulting an immediate activation of time activated events.

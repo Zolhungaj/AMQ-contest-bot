@@ -1,0 +1,1 @@
+Usage: kick [username] <reason>| Kicks the user and bans them until the bot is restarted.
