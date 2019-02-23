@@ -106,7 +106,7 @@ class Game:
     def set_state_idle(self):
         self.state = 0
         self.set_state_time(self.idle_time)
-        self.chat(self.msg_man.get_message("idle"))
+        self.chat(self.msg_man.get_text("idle"))
 
     def close(self):
         self.driver.execute_script("options.logout();")
@@ -168,7 +168,7 @@ class Game:
         start_room.click()
 
     def run(self):
-        self.chat(self.msg_man.get_message("hello_world"))
+        self.chat(self.msg_man.get_text("hello_world"))
         self.lobby = WaitingLobby(self.driver, self.max_players)
         while self.state != -1:
             if self.state == 0:
@@ -197,7 +197,7 @@ class Game:
 
     def idle(self):
         if self.state_timer == 0:
-            self.chat(self.msg_man.get_message("idle"))
+            self.chat(self.msg_man.get_text("idle"))
             self.set_state_time(self.idle_time)
         self.lobby.scan_lobby()
         if self.lobby.player_count > 1:
@@ -224,9 +224,9 @@ class Game:
         if time_left % (int(10/self.tick_rate)) == 0 or time_left <= 0:
             if time_left < 0:
                 time_left = 0
-            self.chat(self.msg_man.get_message("starting_in", [int((time_left)*self.tick_rate)]))
+            self.chat(self.msg_man.get_text("starting_in", [int((time_left)*self.tick_rate)]))
         if self.state_timer <= self.waiting_time_limit:
-            self.chat(self.msg_man.get_message("get_ready"))
+            self.chat(self.msg_man.get_text("get_ready"))
             for p in self.lobby.get_unready():
                 self.chat("@%s" % p.username)
             self.set_state_time(self.ready_wait_time)
@@ -279,7 +279,7 @@ class Game:
             self.lobby = new_lobby
         except Exception:
             self.set_state_idle()
-            self.chat(self.msg_man.get_message("no_songs"))
+            self.chat(self.msg_man.get_text("no_songs"))
             self.exchange_players()
 
     def run_game(self):
@@ -292,7 +292,7 @@ class Game:
             self.skipped_playback = True
             self.driver.execute_script('skipController.toggle()')
             if random.random() < self.chattiness:
-                self.chat(self.msg_man.get_message("answer_reveal", [self.lobby.last_song.anime]))
+                self.chat(self.msg_man.get_text("answer_reveal", [self.lobby.last_song.anime]))
             for p in self.lobby.players:
                 print("%s: %d" % (p.username, p.score))
             if self.lobby.round == self.lobby.total_rounds:
@@ -302,7 +302,7 @@ class Game:
             self.abort_game()
 
     def abort_game(self):
-        self.chat(self.msg_man.get_message("abort_game"))
+        self.chat(self.msg_man.get_text("abort_game"))
         self.driver.execute_script('quiz.startReturnLobbyVote();')
         time.sleep(1)
         self.driver.execute_script('skipController.toggle()')
@@ -315,7 +315,7 @@ class Game:
                 self.player_records[p.username] = [p, False]
             self.last_round_list = self.lobby.song_list
             self.recently_used_list = []
-            self.chat(self.msg_man.get_message("game_complete"))
+            self.chat(self.msg_man.get_text("game_complete"))
         except Exception:
             log_exceptions()
         self.state = 5
@@ -341,7 +341,7 @@ class Game:
         queue_size += (len(players)-len(active_players))  # original size
         if queue_size < self.max_players-len(active_players):
             return
-        self.chat(self.msg_man.get_message("exchange_players"))
+        self.chat(self.msg_man.get_text("exchange_players"))
         names = [p.username for p in players if p.username != self.username]
         chosen = []
         if queue_size >= self.max_players-1:
@@ -392,7 +392,7 @@ class Game:
             chatbox = self.driver.find_element_by_id("gcInput")
             chatbox.send_keys(message)
             chatbox.send_keys(Keys.ENTER)
-            self.log.chat_out(self.msg_man.get_message("log_chat_out", [message]))
+            self.log.chat_out(self.msg_man.get_text("log_chat_out", [message]))
         except Exception:
             log_exceptions()
 
@@ -439,7 +439,7 @@ class Game:
                     self.log.chat("%s said: \"%s\"" % (name, message))
                     match = self.detect_command.match(message)
                     if self.detect_banned_words(message):
-                        self.kick_player(name, self.msg_man.get_message("banned_word"))
+                        self.kick_player(name, self.msg_man.get_text("banned_word"))
                     elif match:
                         self.handle_command(name, match.group(1))
                     done = True
@@ -449,9 +449,9 @@ class Game:
                 if join_as_player:
                     username = join_as_player.group(1)
                     if self.detect_banned_words(username):
-                        self.kick_player(username, self.msg_man.get_message("banned_word"))
+                        self.kick_player(username, self.msg_man.get_text("banned_word"))
                     else:
-                        self.chat(self.msg_man.get_message("greeting_player",
+                        self.chat(self.msg_man.get_text("greeting_player",
                                                            [join_as_player.group(1)]))
                     done = True
                     pass
@@ -460,9 +460,9 @@ class Game:
                 if join_as_spectator:
                     username = join_as_spectator.group(1)
                     if self.detect_banned_words(username):
-                        self.kick_player(username, self.msg_man.get_message("banned_word"))
+                        self.kick_player(username, self.msg_man.get_text("banned_word"))
                     else:
-                        self.chat(self.msg_man.get_message("greeting_spectator",
+                        self.chat(self.msg_man.get_text("greeting_spectator",
                                                            [join_as_spectator.group(1)]))
                     done = True
                     pass
@@ -508,7 +508,7 @@ class Game:
             chatbox = box.find_element_by_tag_name("textarea")
             chatbox.send_keys(message)
             chatbox.send_keys(Keys.ENTER)
-            self.log.chat_out(self.msg_man.get_message("pm_out", [username, message]))
+            self.log.chat_out(self.msg_man.get_text("pm_out", [username, message]))
         except Exception as e:
             log_exceptions()
 
@@ -526,11 +526,11 @@ class Game:
 
     def ban_player(self, username, reason=None, issuer=None):
         try:
-            reason = reason or self.msg_man.get_message("something")
-            issuer = issuer or self.msg_man.get_message("system")
+            reason = reason or self.msg_man.get_text("something")
+            issuer = issuer or self.msg_man.get_text("system")
             with open(self.banned_players_file, "a", encoding="utf-8") as f:
-                f.write(self.msg_man.get_message("ban_comment", [username, issuer, reason])+"\n")
-            reason = self.msg_man.get_message("banned_for", [reason])
+                f.write(self.msg_man.get_text("ban_comment", [username, issuer, reason])+"\n")
+            reason = self.msg_man.get_text("banned_for", [reason])
             self.kick_player(username, reason, issuer)
 
         except Exception:
@@ -538,23 +538,23 @@ class Game:
 
     def kick_player(self, username, reason=None, issuer=None):
         try:
-            reason = reason or self.msg_man.get_message("something")
-            issuer = issuer or self.msg_man.get_message("system")
+            reason = reason or self.msg_man.get_text("something")
+            issuer = issuer or self.msg_man.get_text("system")
             if username not in self.admins:
                 if self.state < 3:
                     self.lobby.remove_player(username, reason)
                     self.driver.execute_script('lobby.kickPlayer("%s")' % username)
-                    self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
+                    self.chat(self.msg_man.get_text("kick_chat", [username, reason]))
                     self.message_player(username,
-                                        self.msg_man.get_message("kick_pm", [reason]))
+                                        self.msg_man.get_text("kick_pm", [reason]))
                 elif username not in [p.username for p in self.lobby.players]:
                     self.driver.execute_script('gameChat.kickSpectator("%s")' % username)
-                    self.chat(self.msg_man.get_message("kick_chat", [username, reason]))
+                    self.chat(self.msg_man.get_text("kick_chat", [username, reason]))
                     self.message_player(username,
-                                        self.msg_man.get_message("kick_pm", [reason]))
+                                        self.msg_man.get_text("kick_pm", [reason]))
                 self.kick_list.append(username)
             elif username != self.username:
-                self.chat(self.msg_man.get_message("scorn_admin", [username]))
+                self.chat(self.msg_man.get_text("scorn_admin", [username]))
         except Exception:
             log_exceptions()
 
@@ -564,54 +564,64 @@ class Game:
         else:
             self.driver.execute_script('gameChat.kickSpectator("%s")' % username)
 
+    def profile(self, username):
+        id = self.database.get_player_id(username)
+        if id is None:
+            return None
+        ret = []
+        truename = self.database.get_player_truename(id)
+        ret.append(self.msg_man.get_text("username") + truename)
+        return ret
+
+
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
             match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
             if not match:
-                self.chat(self.msg_man.get_message("unknown_command"))
+                self.chat(self.msg_man.get_text("unknown_command"))
                 return
             if command == "help":
-                self.chat(self.msg_man.get_message("help"))
+                self.chat(self.msg_man.get_text("help"))
                 if user in self.admins:
-                    self.chat(self.msg_man.get_message("help_admin"))
+                    self.chat(self.msg_man.get_text("help_admin"))
                 return
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
                 match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
                 if not match:
-                    self.chat(self.msg_man.get_message("unknown_command"))
+                    self.chat(self.msg_man.get_text("unknown_command"))
                     return
                 if command == "help":
-                    self.chat(self.msg_man.get_message("help_help"))
+                    self.chat(self.msg_man.get_text("help_help"))
                 elif command == "about":
-                    self.chat(self.msg_man.get_message("help_about"))
+                    self.chat(self.msg_man.get_text("help_about"))
                 elif command == "list":
-                    self.chat(self.msg_man.get_message("help_list"))
+                    self.chat(self.msg_man.get_text("help_list"))
                 elif command == "missed":
-                    self.chat(self.msg_man.get_message("help_missed"))
+                    self.chat(self.msg_man.get_text("help_missed"))
                 elif user not in self.admins:
-                    self.chat(self.msg_man.get_message("permission_denied",
+                    self.chat(self.msg_man.get_text("permission_denied",
                                                        [user]))
                 elif command == "stop":
-                    self.chat(self.msg_man.get_message("help_stop"))
+                    self.chat(self.msg_man.get_text("help_stop"))
                 elif command == "setchattiness":
-                    self.chat(self.msg_man.get_message("help_setchattiness",
+                    self.chat(self.msg_man.get_text("help_setchattiness",
                                                        [self.username]))
                 elif command == "addadmin":
-                    self.chat(self.msg_man.get_message("help_addadmin"))
+                    self.chat(self.msg_man.get_text("help_addadmin"))
                 elif command == "kick":
-                    self.chat(self.msg_man.get_message("help_kick"))
+                    self.chat(self.msg_man.get_text("help_kick"))
                 elif command == "ban":
-                    self.chat(self.msg_man.get_message("help_ban"))
+                    self.chat(self.msg_man.get_text("help_ban"))
                 elif command == "forceevent":
-                    self.chat(self.msg_man.get_message("help_forceevent"))
+                    self.chat(self.msg_man.get_text("help_forceevent"))
                 return
             if command.lower() == "about":
-                self.chat(self.msg_man.get_message("about"))
+                self.chat(self.msg_man.get_text("about"))
                 if random.random()*100 > 90:
-                    self.chat(self.msg_man.get_message("about_joke_intro")+" "+self.msg_man.get_message("about_joke"))
+                    self.chat(self.msg_man.get_text("about_joke_intro")+" "+self.msg_man.get_text("about_joke"))
                 return
             if command.lower() == "missed":
                 if user in self.player_records:
@@ -625,26 +635,26 @@ class Game:
                             answer = s[1]
 
                             messages.append([user, str(song)])
-                            messages.append([user, self.msg_man.get_message("you_answered", [answer])])
+                            messages.append([user, self.msg_man.get_text("you_answered", [answer])])
                         self.message_backlog += messages
                     else:
-                        self.chat(self.msg_man.get_message("already_done", [user]))
+                        self.chat(self.msg_man.get_text("already_done", [user]))
                     record[1] = True
                 else:
-                    self.chat(self.msg_man.get_message("no_game_recorded", [user]))
+                    self.chat(self.msg_man.get_text("no_game_recorded", [user]))
                 return
             if command.lower() == "list":
                 if self.last_round_list is None:
-                    self.chat(self.msg_man.get_message("list_fail_no_games", [user]))
+                    self.chat(self.msg_man.get_text("list_fail_no_games", [user]))
                 elif user in self.recently_used_list:
-                    self.chat(self.msg_man.get_message("list_fail_already_done", [user]))
+                    self.chat(self.msg_man.get_text("list_fail_already_done", [user]))
                 else:
                     song_list = self.last_round_list
                     messages = []
                     for s in song_list:
                         messages.append([user, str(s)])
                     self.message_backlog += messages
-                    self.chat(self.msg_man.get_message("list_success", [user]))
+                    self.chat(self.msg_man.get_text("list_success", [user]))
                     self.recently_used_list.append(user)
                 return
             match = re.match(r"(?i)answer\s(.*)\s", command)
@@ -657,14 +667,14 @@ class Game:
                 return
             # admin only commands below
             if user not in self.admins:
-                self.chat(self.msg_man.get_message("permission_denied",
+                self.chat(self.msg_man.get_text("permission_denied",
                                                    [user]))
                 return
             if command.lower() == "forceevent":
                 self.state_timer = 1
                 return
             if command.lower() == "stop":
-                self.chat(self.msg_man.get_message("stop"))
+                self.chat(self.msg_man.get_text("stop"))
                 self.state = -1
                 return
             match = re.match(r"(?i)addadmin\s@?([^ ]*)", command)
