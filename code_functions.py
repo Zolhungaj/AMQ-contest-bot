@@ -60,6 +60,15 @@ def int_to_query(input):
         return "Optional"
 
 
+def query_to_int(input):
+    if input.lower() == "included":
+        return 1
+    elif input.lower() == "excluded":
+        return 2
+    elif input.lower() == "optional":
+        return 3
+
+
 def strbool_to_int(input):
     if input.lower() == "true":
         return 1
@@ -113,20 +122,13 @@ def sample_point_to_int(input):
         return 3
 
 
-def query_to_int(input):
-    if input.lower() == "included":
-        return 1
-    elif input.lower() == "excluded":
-        return 2
-    elif input.lower() == "optional":
-        return 3
-
-
 def pad3(input):
     out = int_to_base_36(input)
     if len(out) > 3:
         out = out[-3:]
     elif len(out) < 2:
+        out = "00" + out
+    elif len(out) < 3:
         out = "0" + out
     return out
 
@@ -147,36 +149,36 @@ def pad1(input):
     return out
 
 
-def create_code(player_count, song_count,
-                skip_guess, skip_result, queuing, duplicate_shows,
-                selection_advanced, song_selection_simple,
-                selection_watched, selection_unwatched, selection_random,
-                type_advanced, type_opening, type_ending, type_insert,
-                openings, endings, inserts, type_random,
-                random_time,
-                guess_time, guess_time_low, guess_time_high,
-                random_sample,
-                sample_point, sample_point_low, sample_point_high,
-                random_speed, const_speed,
-                random_speed1, random_speed1_5, random_speed2, random_speed4,
-                song_difficulty_advanced, easy, medium, hard,
-                difficulty_low, difficulty_high,
-                popularity_advanced, disliked, mixed, liked,
-                popularity_low, popularity_high,
-                player_score_advanced, player_score_low, player_score_high,
-                player_score_1, player_score_2, player_score_3,
-                player_score_4, player_score_5, player_score_6,
-                player_score_7, player_score_8, player_score_9,
-                player_score_10,
-                anime_score_advanced, anime_score_low, anime_score_high,
-                anime_score_2, anime_score_3, anime_score_4, anime_score_5,
-                anime_score_6, anime_score_7, anime_score_8, anime_score_9,
-                anime_score_10,
-                year_ranges,
-                tv, movie, ova, ona, special,
-                genres,
-                tags
-                ):
+def create_code(
+        player_count, song_count,
+        skip_guess, skip_result, queueing, duplicate_shows,
+        selection_advanced, song_selection_simple,
+        selection_watched, selection_unwatched, selection_random,
+        type_advanced, type_opening, type_ending, type_insert,
+        openings, endings, inserts, type_random,
+        random_time,
+        guess_time, guess_time_low, guess_time_high,
+        random_sample,
+        sample_point, sample_point_low, sample_point_high,
+        random_speed, const_speed,
+        random_speed1, random_speed1_5, random_speed2, random_speed4,
+        song_difficulty_advanced, easy, medium, hard,
+        difficulty_low, difficulty_high,
+        popularity_advanced, disliked, mixed, liked,
+        popularity_low, popularity_high,
+        player_score_advanced, player_score_low, player_score_high,
+        player_score_1, player_score_2, player_score_3,
+        player_score_4, player_score_5, player_score_6,
+        player_score_7, player_score_8, player_score_9,
+        player_score_10,
+        anime_score_advanced, anime_score_low, anime_score_high,
+        anime_score_2, anime_score_3, anime_score_4, anime_score_5,
+        anime_score_6, anime_score_7, anime_score_8, anime_score_9,
+        anime_score_10,
+        year_ranges,
+        tv, movie, ova, ona, special,
+        genres,
+        tags):
     code = "1"  # version number?
     code += pad1(player_count)
     code += pad2(song_count)
@@ -188,7 +190,7 @@ def create_code(player_count, song_count,
         code += "1"
     else:
         code += "0"
-    if queuing:
+    if queueing:
         code += "1"
     else:
         code += "0"
@@ -454,7 +456,8 @@ def code_to_text(code):
     pos += 2
     lines.append("Random selection: %s" % base_36_to_int(code[pos:pos+2]))
     pos += 2
-    lines.append("Enable advanced type distribution: %s" % int_to_strbool(code[pos]))
+    lines.append(
+        "Enable advanced type distribution: %s" % int_to_strbool(code[pos]))
     pos += 1
     lines.append("Enable openings: %s" % int_to_strbool(code[pos]))
     pos += 1
