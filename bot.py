@@ -11,7 +11,10 @@ def main():
     the main function, where the magic happens
     """
     # sys_log("AMQ-automator started")
-    game = Game("default.config")
+    configfile = input("select config name [default = \"default\"]")
+    if configfile == "":
+        configfile = "default"
+    game = Game(configfile + ".config")
     try:
         game.start()
     except Exception as e:
