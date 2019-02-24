@@ -37,7 +37,7 @@ class Database:
         rating INTEGER NOT NULL,
         FOREIGN KEY(player_id) REFERENCES player(id)
         )""")
-        c.execute("""CREATE TABLE game(
+        c.execute("""CREATE TABLE IF NOT EXISTS game(
         id INTEGER PRIMARY KEY
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS gametoplayer(
