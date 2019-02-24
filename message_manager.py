@@ -26,7 +26,7 @@ class MessageManager:
         self.path = self.langpack + directory + "/"
         # self.database = MessageManager.database
 
-    def get_message(self, name, substitutions=[], number=None):
+    def get_text(self, name, substitutions=[], number=None):
         filename = name
         try:
             if number is None:

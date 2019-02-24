@@ -15,7 +15,8 @@ class Database:
 
         c.execute("""CREATE TABLE IF NOT EXISTS player(
         id INTEGER PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL
+        username TEXT UNIQUE NOT NULL,
+        truename TEXT NOT NULL
         );""")
         c.execute("""CREATE TABLE IF NOT EXISTS message(
         id INTEGER PRIMARY KEY,
@@ -120,14 +121,18 @@ class Database:
         try:
             self.conn.execute("""INSERT INTO player VALUES(
             NULL,
-            (?)
-            )""", (username,))
+            (?),
+            ?
+            )""", (username.lower(), username,))
         except sqlite3.IntegrityError as e:
             return None
         self.conn.commit()
         return self.get_player_id(username)
 
     def get_player_id(self, username):
+        if username is None:
+            return None
+        username = username.lower()
         c = self.conn.cursor()
         c.execute("""SELECT id FROM player WHERE username=(?)""", (username,))
         result = c.fetchone()
@@ -142,6 +147,26 @@ class Database:
         if player_id is None:
             player_id = self.create_player(username)
         return player_id
+
+    def get_player_username(self, player_id):
+        c = self.conn.cursor()
+        c.execute("""SELECT username FROM player WHERE id=(?)""", (player_id,))
+        result = c.fetchone()
+        c.close()
+        if result is None:
+            return None
+        else:
+            return result[0]
+
+    def get_player_truename(self, player_id):
+        c = self.conn.cursor()
+        c.execute("""SELECT truename FROM player WHERE id=(?)""", (player_id,))
+        result = c.fetchone()
+        c.close()
+        if result is None:
+            return None
+        else:
+            return result[0]
 
     def save_message(self, username, message):
         player_id = self.get_or_create_player_id(username)
