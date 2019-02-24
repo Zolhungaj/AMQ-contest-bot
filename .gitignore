@@ -4,3 +4,4 @@ __pycache__/
 *.amq
 *.log
 geckodriver*
+*.db
