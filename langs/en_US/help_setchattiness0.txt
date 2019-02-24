@@ -1,0 +1,1 @@
+Usage: setchattiness [0-100]| Sets the likelihood in percent of &1 speaking in certain situations.

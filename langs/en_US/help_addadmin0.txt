@@ -1,0 +1,1 @@
+Usage: addadmin [username]| Adds a new admin to the bot.

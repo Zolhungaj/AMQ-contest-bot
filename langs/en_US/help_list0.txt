@@ -1,0 +1,1 @@
+Sends you a list of the previous game the bot ran, can only be used once per game
