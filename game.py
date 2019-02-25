@@ -66,6 +66,8 @@ class Game:
             for line in f.readlines():
                 self.admins.append(line[:-1])
         print(self.admins)
+        for a in self.admins:
+            self.database.add_administrator(a)
         with open(self.banned_players_file) as f:
             for line in f.readlines():
                 self.banned_players_list.append(line[:-1])
@@ -443,6 +445,7 @@ class Game:
                     while num == 1:
                         message, num = self.detect_emoji.subn(r"<\g<1>>", message, 1)
                     self.log.chat("%s said: \"%s\"" % (name, message))
+                    self.database.save_message(name, message)
                     match = self.detect_command.match(message)
                     if self.detect_banned_words(message):
                         self.kick_player(name, self.msg_man.get_text("banned_word"))
@@ -454,6 +457,7 @@ class Game:
                     # the glory of not being able to assign in an if
                 if join_as_player:
                     username = join_as_player.group(1)
+                    self.database.create_player(username)
                     if self.detect_banned_words(username):
                         self.kick_player(username, self.msg_man.get_text("banned_word"))
                     else:
@@ -464,6 +468,7 @@ class Game:
                 if not done:
                     join_as_spectator = self.player_joined_as_spectator.search(match)
                 if join_as_spectator:
+                    self.database.create_player(username)
                     username = join_as_spectator.group(1)
                     if self.detect_banned_words(username):
                         self.kick_player(username, self.msg_man.get_text("banned_word"))
@@ -539,6 +544,7 @@ class Game:
                 f.write(self.msg_man.get_text("ban_comment", [username, issuer, reason])+"\n")
             reason = self.msg_man.get_text("banned_for", [reason])
             self.kick_player(username, reason, issuer)
+            self.database.ban_player(username, reason, issuer)
 
         except Exception:
             log_exceptions()
@@ -547,7 +553,7 @@ class Game:
         try:
             reason = reason or self.msg_man.get_text("something")
             issuer = issuer or self.msg_man.get_text("system")
-            if username not in self.admins:
+            if not self.database.is_moderator(username):
                 if self.state < 3:
                     self.lobby.remove_player(username, reason)
                     self.driver.execute_script(
@@ -588,19 +594,21 @@ class Game:
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list", command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
             if command == "help":
                 self.auto_chat("help")
-                if user in self.admins:
+                if self.database.is_moderator(user):
+                    self.auto_chat("help_moderator")
+                if self.database.is_administrator(user):
                     self.auto_chat("help_admin")
                 return
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
+                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
                 if not match:
                     self.auto_chat("unknown_command")
                     return
@@ -612,25 +620,30 @@ class Game:
                     self.auto_chat("help_list")
                 elif command == "missed":
                     self.auto_chat("help_missed")
-                elif user not in self.admins:
+                elif not self.database.is_moderator(user):
+                    self.auto_chat("permission_denied", [user])
+                elif command == "setchattiness":
+                    self.auto_chat("help_setchattiness", [self.username])
+                elif command == "kick":
+                    self.auto_chat("help_kick")
+                elif command == "forceevent":
+                    self.auto_chat("help_forceevent")
+                elif not self.database.is_administrator(user):
                     self.auto_chat("permission_denied", [user])
                 elif command == "stop":
                     self.auto_chat("help_stop")
-                elif command == "setchattiness":
-                    self.auto_chat("help_setchattiness", [self.username])
                 elif command == "addadmin":
                     self.auto_chat("help_addadmin")
-                elif command == "kick":
-                    self.auto_chat("help_kick")
+                elif command == "addmoderator":
+                    self.auto_chat("help_addmoderator")
                 elif command == "ban":
                     self.auto_chat("help_ban")
-                elif command == "forceevent":
-                    self.auto_chat("help_forceevent")
                 return
             if command.lower() == "about":
                 self.auto_chat("about")
                 if random.random()*100 > 90:
-                    self.auto_chat("about_joke_intro")+" "+self.msg_man.get_text("about_joke")
+                    self.chat(self.msg_man.get_text("about_joke_intro") + " " +
+                              self.msg_man.get_text("about_joke"))
                 return
             if command.lower() == "missed":
                 if user in self.player_records:
@@ -675,11 +688,25 @@ class Game:
                 self.chat("not implemented")
                 return
             # admin only commands below
-            if user not in self.admins:
+            if not self.database.is_moderator(user):
                 self.auto_chat("permission_denied", [user])
                 return
+            match = re.match(r"(?i)setchattiness\s(-?\d+)", command)
+            if match:
+                self.set_chattiness(int(match.group(1)))
+            match = re.match(r"(?i)kick\s@?([^ ]*)(?:\s(.*))", command)
+            if match:
+                username = match.group(1)
+                reason = match.group(2)
+                if reason == "":
+                    reason = None
+                    self.kick_player(username, reason, user)
+                    return
             if command.lower() == "forceevent":
                 self.state_timer = 1
+                return
+            if not self.database.is_administrator(user):
+                self.auto_chat("permission_denied", [user])
                 return
             if command.lower() == "stop":
                 self.auto_chat("stop")
@@ -687,17 +714,14 @@ class Game:
                 return
             match = re.match(r"(?i)addadmin\s@?([^ ]*)", command)
             if match:
+                self.database.add_administrator(match.group(1), user)
                 self.admins.append(match.group(1))
                 with open(self.admins_file, "a", encoding="utf-8") as f:
                     f.write(match.group(1) + "\n")
                 return
-            match = re.match(r"(?i)kick\s@?([^ ]*)(?:\s(.*))", command)
+            match = re.match(r"(?i)addmoderator\s@?([^ ]*)", command)
             if match:
-                username = match.group(1)
-                reason = match.group(2)
-                if reason == "":
-                    reason = None
-                self.kick_player(username, reason, user)
+                self.database.add_moderator(match.group(1), user)
                 return
             match = re.match(r"(?i)ban\s@?([^ ]*)(?:\s(.*))?", command)
             if match:
@@ -707,9 +731,6 @@ class Game:
                     reason = None
                 self.ban_player(username, reason, user)
                 return
-            match = re.match(r"(?i)setchattiness\s(-?\d+)", command)
-            if match:
-                self.set_chattiness(int(match.group(1)))
             pass
         except Exception:
             log_exceptions()

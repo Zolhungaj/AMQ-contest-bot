@@ -94,6 +94,7 @@ class Database:
         try:
             self.conn.execute("""INSERT INTO player VALUES(
             0,
+            '<system>',
             '<System>'
             );""")
         except Exception as e:
@@ -254,7 +255,7 @@ class Database:
         player_id = self.get_or_create_player_id(username)
         source_id = self.get_player_id(source) or 0
         try:
-            self.conn.execute("""INSERT INTO administrator VALUES(
+            self.conn.execute("""INSERT INTO moderator VALUES(
             ?,
             ?
             )""", (player_id, source_id,))

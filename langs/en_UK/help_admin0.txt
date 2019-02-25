@@ -1,1 +1,1 @@
-Admin commands: stop, addadmin, forceevent, kick, ban, setchattiness
+Admin commands: stop, addadmin, ban

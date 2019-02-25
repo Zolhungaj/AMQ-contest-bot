@@ -18,7 +18,8 @@ class MessageManager:
                 "help_list": 1, "help_missing": 1, "help_stop": 1,
                 "help_setchattiness": 1, "help_ban": 1, "help_kick": 1,
                 "help_forceevent": 1, "list_success": 1, "game_complete": 1,
-                "list_fail_no_games": 1, "list_fail_already_done": 1, }
+                "list_fail_no_games": 1, "list_fail_already_done": 1,
+                "help_moderator": 1, "help_addmoderator": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):

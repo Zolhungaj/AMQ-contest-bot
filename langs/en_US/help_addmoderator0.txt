@@ -1,0 +1,1 @@
+Usage: addmoderator [username]| Adds a new moderator to the bot.

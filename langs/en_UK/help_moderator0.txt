@@ -1,0 +1,1 @@
+Moderator commands: forceevent, kick, setchattiness
