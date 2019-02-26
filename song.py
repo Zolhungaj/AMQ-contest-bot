@@ -7,13 +7,16 @@ class Song:
         self.link = link
 
     def __repr__(self):
-        return "Song('%s', '%s', '%s', '%s')" % (self.anime,
-                                                 self.name,
-                                                 self.artist,
-                                                 self.type,
-                                                 self.link)
+        return "Song('%s', '%s', '%s', '%s', '%s')" % (self.anime,
+                                                       self.name,
+                                                       self.artist,
+                                                       self.type,
+                                                       self.link)
 
     def __str__(self):
         return "%s:[%s] %s「%s」by: %s" % (self.anime, self.link,
                                          self.type, self.name,
                                          self.artist)
+
+    def __format__(self):
+        return self.__str__()

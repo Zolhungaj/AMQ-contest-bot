@@ -469,8 +469,8 @@ class Game:
                 if not done:
                     join_as_spectator = self.player_joined_as_spectator.search(match)
                 if join_as_spectator:
-                    self.database.create_player(username)
                     username = join_as_spectator.group(1)
+                    self.database.create_player(username)
                     if self.detect_banned_words(username):
                         self.kick_player(username, self.msg_man.get_text("banned_word"))
                     else:
@@ -595,7 +595,7 @@ class Game:
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote|elo", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
@@ -646,6 +646,10 @@ class Game:
                     self.chat(self.msg_man.get_text("about_joke_intro") + " " +
                               self.msg_man.get_text("about_joke"))
                 return
+            if command.lower() == "elo":
+                id = self.database.get_player_id(user)
+                elo = str(self.database.get_or_create_elo(id))
+                self.auto_chat("elo", [elo])
             if command.lower() == "missed":
                 if user in self.player_records:
                     record = self.player_records[user]

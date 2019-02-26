@@ -1,4 +1,5 @@
 import sqlite3
+import math
 
 
 class Database:
@@ -52,7 +53,8 @@ class Database:
         game_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
         ordinal INTEGER,
-        PRIMARY KEY(game_id, player_id),
+        answer TEXT,
+        PRIMARY KEY(game_id, player_id, ordinal),
         FOREIGN KEY(game_id) REFERENCES game(id),
         FOREIGN KEY(player_id) REFERENCES player(id)
         )""")
@@ -60,7 +62,8 @@ class Database:
         game_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
         ordinal INTEGER,
-        PRIMARY KEY(game_id, player_id),
+        answer TEXT,
+        PRIMARY KEY(game_id, player_id, ordinal),
         FOREIGN KEY(game_id) REFERENCES game(id),
         FOREIGN KEY(player_id) REFERENCES player(id)
         )""")
@@ -71,8 +74,9 @@ class Database:
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS elodiff(
         game_id INTEGER NOT NULL,
-        player_id INTEGER PRIMARY KEY,
+        player_id INTEGER NOT NULL,
         rating_change INTEGER NOT NULL,
+        PRIMARY KEY(game_id, player_id),
         FOREIGN KEY(player_id) REFERENCES player(id),
         FOREIGN KEY(game_id) REFERENCES game(id)
         )""")
@@ -377,7 +381,7 @@ class Database:
                 artist = ?
             AND
                 link = ?
-        """, (song.anime, song.type, song.title, song.artist, song.link,))
+        """, (song.anime, song.type, song.name, song.artist, song.link,))
         return res.fetchone()
 
     def get_or_create_song_id(self, song):
@@ -391,7 +395,7 @@ class Database:
             ?,
             ?,
             ?)
-            """, (song.anime, song.type, song.title, song.artist, song.link,))
+            """, (song.anime, song.type, song.name, song.artist, song.link,))
             res = self.get_song_id(song)
             self.conn.commit()
         return res[0]
@@ -441,6 +445,10 @@ class Database:
 
     def update_elo(self, game_id, player_id, diff):
         elo = self.get_or_create_elo(player_id)
+        if diff > 0:
+            diff = math.ceil(diff)
+        else:
+            diff = int(diff)
         self.conn.execute("""
         UPDATE elo
         SET rating = ?
@@ -459,8 +467,8 @@ class Database:
         counter = 0
         song_list_with_ordinal = {}
         for s in song_list:
-            self.add_song_to_game(game_id, song, counter)
-            song_list_with_ordinal[str(song)] = counter
+            self.add_song_to_game(game_id, s, counter)
+            song_list_with_ordinal[str(s)] = counter
             counter += 1
         for p in players:
             player_id = self.get_or_create_player_id(p.username)
@@ -469,7 +477,7 @@ class Database:
             position = 1
             for p2 in players:
                 if len(p2.correct_songs) > correct_songs:
-                    position -= 1
+                    position += 1
             self.conn.execute("""
             INSERT into gametoplayer VALUES(
             ?,
@@ -479,30 +487,32 @@ class Database:
             ?
             )""", (game_id, player_id, correct_songs, missed_songs, position,))
             for s in p.correct_songs:
-                ordinal = song_list_with_ordinal[str(s)]
+                ordinal = song_list_with_ordinal[str(s[0])]
                 self.conn.execute("""
-                INSERT into gametoplayertocorrect VALUES(
+                INSERT into gameplayertocorrect VALUES(
+                ?,
                 ?,
                 ?,
                 ?
-                )""", (game_id, player_id, ordinal))
+                )""", (game_id, player_id, ordinal, s[1]))
             for s in p.wrong_songs:
-                ordinal = song_list_with_ordinal[str(s)]
+                ordinal = song_list_with_ordinal[str(s[0])]
                 self.conn.execute("""
-                INSERT into gametoplayertomissed VALUES(
+                INSERT into gameplayertomissed VALUES(
+                ?,
                 ?,
                 ?,
                 ?
-                )""", (game_id, player_id, ordinal))
+                )""", (game_id, player_id, ordinal, s[1]))
         player_id_elo_score = []
         for p in players:
-            player_id = self.get_or_create_player_id(player.username)
+            player_id = self.get_or_create_player_id(p.username)
             elo = self.get_or_create_elo(player_id)
             correct_songs = len(p.correct_songs)
             player_id_elo_score.append((player_id, elo, correct_songs,))
         k = 32
         k2 = int(k*2/len(players))
-        for p, elo, correct_songs in player_id_elo_score:
+        for p, elo1, correct_songs in player_id_elo_score:
             diff = 0
             for p2, elo2, correct_songs2 in player_id_elo_score:
                 diff2 = 0
