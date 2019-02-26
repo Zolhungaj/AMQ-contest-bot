@@ -32,22 +32,49 @@ class Database:
         FOREIGN KEY(player_id) REFERENCES player(id),
         FOREIGN KEY(banner) REFERENCES player(id)
         );""")
-        c.execute("""CREATE TABLE IF NOT EXISTS elo(
-        player_id INTEGER PRIMARY KEY,
-        rating INTEGER NOT NULL,
-        FOREIGN KEY(player_id) REFERENCES player(id)
-        )""")
         c.execute("""CREATE TABLE IF NOT EXISTS game(
-        id INTEGER PRIMARY KEY
+        id INTEGER PRIMARY KEY,
+        song_count INTEGER,
+        player_count INTEGER,
+        time TEXT
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS gametoplayer(
         game_id INTEGER NOT NULL,
         player_id INTEGER NOT NULL,
         result INTEGER,
+        miss_count INTEGER,
         position INTEGER,
         PRIMARY KEY(game_id, player_id),
         FOREIGN KEY(game_id) REFERENCES game(id),
         FOREIGN KEY(player_id) REFERENCES player(id)
+        )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS gameplayertomissed(
+        game_id INTEGER NOT NULL,
+        player_id INTEGER NOT NULL,
+        ordinal INTEGER,
+        PRIMARY KEY(game_id, player_id),
+        FOREIGN KEY(game_id) REFERENCES game(id),
+        FOREIGN KEY(player_id) REFERENCES player(id)
+        )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS gameplayertocorrect(
+        game_id INTEGER NOT NULL,
+        player_id INTEGER NOT NULL,
+        ordinal INTEGER,
+        PRIMARY KEY(game_id, player_id),
+        FOREIGN KEY(game_id) REFERENCES game(id),
+        FOREIGN KEY(player_id) REFERENCES player(id)
+        )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS elo(
+        player_id INTEGER PRIMARY KEY,
+        rating INTEGER NOT NULL,
+        FOREIGN KEY(player_id) REFERENCES player(id)
+        )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS elodiff(
+        game_id INTEGER NOT NULL,
+        player_id INTEGER PRIMARY KEY,
+        rating_change INTEGER NOT NULL,
+        FOREIGN KEY(player_id) REFERENCES player(id),
+        FOREIGN KEY(game_id) REFERENCES game(id)
         )""")
         c.execute("""CREATE TABLE IF NOT EXISTS song(
         id INTEGER PRIMARY KEY,
@@ -336,6 +363,165 @@ class Database:
         LEFT OUTER JOIN player as p2 on p2.id = r.referer_id
         ORDER BY r.lvl, p.username, p2.username""")
         return res.fetchall()
+
+    def get_song_id(self, song):
+        res = self.conn.execute("""
+        SELECT id FROM song
+        WHERE
+                anime = ?
+            AND
+                type = ?
+            AND
+                title = ?
+            AND
+                artist = ?
+            AND
+                link = ?
+        """, (song.anime, song.type, song.title, song.artist, song.link,))
+        return res.fetchone()
+
+    def get_or_create_song_id(self, song):
+        res = self.get_song_id(song)
+        if res is None:
+            self.conn.execute("""
+            INSERT INTO song VALUES(
+            NULL,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?)
+            """, (song.anime, song.type, song.title, song.artist, song.link,))
+            res = self.get_song_id(song)
+            self.conn.commit()
+        return res[0]
+
+    def create_game(self, song_count, player_count):
+        self.conn.execute("""
+        INSERT INTO game VALUES(
+        NULL,
+        ?,
+        ?,
+        DATETIME('now')
+        )""", (song_count, player_count,))
+        res = self.conn.execute("""
+        SELECT id FROM game
+        ORDER BY id DESC
+        LIMIT 1""")
+        self.conn.commit()
+        return res.fetchone()[0]
+
+    def add_song_to_game(self, game_id, song, ordinal):
+        song_id = self.get_or_create_song_id(song)
+        self.conn.execute("""
+        INSERT INTO gametosong VALUES(
+        ?,
+        ?,
+        ?
+        )""", (game_id, song_id, ordinal))
+        self.conn.commit()
+
+    def get_elo(self, player_id):
+        res = self.conn.execute("""
+        SELECT rating FROM elo
+        WHERE player_id = ?""", (player_id,))
+        return res.fetchone()
+
+    def get_or_create_elo(self, player_id):
+        res = self.get_elo(player_id)
+        if res is None:
+            default_elo = 1400
+            self.conn.execute("""
+            INSERT INTO elo VALUES(
+            ?,
+            ?
+            )""", (player_id, default_elo))
+            res = self.get_elo(player_id)
+        return res[0]
+
+    def update_elo(self, game_id, player_id, diff):
+        elo = self.get_or_create_elo(player_id)
+        self.conn.execute("""
+        UPDATE elo
+        SET rating = ?
+        WHERE player_id = ?
+        """, (elo+diff, player_id,))
+        self.conn.execute("""
+        INSERT INTO elodiff VALUES(
+        ?,
+        ?,
+        ?
+        )""", (game_id, player_id, diff,))
+        self.conn.commit()
+
+    def record_game(self, song_list, players):
+        game_id = self.create_game(len(song_list), len(players))
+        counter = 0
+        song_list_with_ordinal = {}
+        for s in song_list:
+            self.add_song_to_game(game_id, song, counter)
+            song_list_with_ordinal[str(song)] = counter
+            counter += 1
+        for p in players:
+            player_id = self.get_or_create_player_id(p.username)
+            correct_songs = len(p.correct_songs)
+            missed_songs = len(p.wrong_songs)
+            position = 1
+            for p2 in players:
+                if len(p2.correct_songs) > correct_songs:
+                    position -= 1
+            self.conn.execute("""
+            INSERT into gametoplayer VALUES(
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+            )""", (game_id, player_id, correct_songs, missed_songs, position,))
+            for s in p.correct_songs:
+                ordinal = song_list_with_ordinal[str(s)]
+                self.conn.execute("""
+                INSERT into gametoplayertocorrect VALUES(
+                ?,
+                ?,
+                ?
+                )""", (game_id, player_id, ordinal))
+            for s in p.wrong_songs:
+                ordinal = song_list_with_ordinal[str(s)]
+                self.conn.execute("""
+                INSERT into gametoplayertomissed VALUES(
+                ?,
+                ?,
+                ?
+                )""", (game_id, player_id, ordinal))
+        player_id_elo_score = []
+        for p in players:
+            player_id = self.get_or_create_player_id(player.username)
+            elo = self.get_or_create_elo(player_id)
+            correct_songs = len(p.correct_songs)
+            player_id_elo_score.append((player_id, elo, correct_songs,))
+        k = 32
+        k2 = int(k*2/len(players))
+        for p, elo, correct_songs in player_id_elo_score:
+            diff = 0
+            for p2, elo2, correct_songs2 in player_id_elo_score:
+                diff2 = 0
+                ex1 = 1/(1+10**((elo2-elo1)/400))
+                ex2 = 1/(1+10**((elo1-elo2)/400))
+                if correct_songs == correct_songs2:
+                    s1 = 0.5
+                elif correct_songs < correct_songs2:
+                    s1 = 0
+                else:
+                    s1 = 1
+                diff2 = (s1 - ex1) * k2
+                diff += diff2
+            if diff > k:
+                diff = k
+            if diff < -k:
+                diff = -k
+            self.update_elo(game_id, p, diff)
+        self.conn.commit()
 
 
 if __name__ == "__main__":

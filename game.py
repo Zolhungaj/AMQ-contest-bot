@@ -320,6 +320,7 @@ class Game:
                 self.player_records[p.username] = [p, False]
             self.last_round_list = self.lobby.song_list
             self.recently_used_list = []
+            self.database.record_game(self.lobby.song_list, self.lobby.players)
             self.auto_chat("game_complete")
         except Exception:
             log_exceptions()
