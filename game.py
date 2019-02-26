@@ -609,7 +609,7 @@ class Game:
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote", command)
+                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote|elo", command)
                 if not match:
                     self.auto_chat("unknown_command")
                     return
@@ -650,6 +650,7 @@ class Game:
                 id = self.database.get_player_id(user)
                 elo = str(self.database.get_or_create_elo(id))
                 self.auto_chat("elo", [elo])
+                return
             if command.lower() == "missed":
                 if user in self.player_records:
                     record = self.player_records[user]
