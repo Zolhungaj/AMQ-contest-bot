@@ -1,1 +1,1 @@
-Common commands: help, about, missed, list
+Common commands: help, about, missed, list, elo
