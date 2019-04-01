@@ -474,8 +474,7 @@ class Game:
                     if self.detect_banned_words(username):
                         self.kick_player(username, self.msg_man.get_text("banned_word"))
                     else:
-                        self.auto_chat("greeting_spectator",
-                                       [join_as_spectator.group(1)])
+                        self.auto_chat("greeting_spectator", [username])
                     done = True
                     pass
                 if not done:

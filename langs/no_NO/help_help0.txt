@@ -1,0 +1,1 @@
+Skriver hjelp-menyen. help <kommando> for å få informasjon om en kommande, men det vet du vel allerede.

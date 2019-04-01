@@ -1,0 +1,1 @@
+Sender deg en liste over sangene fra det forrige spillet, kan bare brukes én gang per spill.

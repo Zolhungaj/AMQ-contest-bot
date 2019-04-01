@@ -1,0 +1,1 @@
+Bruk: ban [brukernavn] <grunn>| Sparker en bruker, og sparker dem hvis de prøver å koble på på nytt.

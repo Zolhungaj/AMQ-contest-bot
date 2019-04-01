@@ -1,0 +1,2 @@
+Å dette var en fin sang, jeg burde legge til denne animen til må-se listen min.
+Vent, hvorfor får jeg en API-feil fra MinAnimeListe når jeg søker på &1?

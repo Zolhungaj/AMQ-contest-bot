@@ -38,7 +38,7 @@ class MessageManager:
                 else:
                     filename += name + str(self.database[name]-1)
             filename += ".txt"
-            with open(self.path + filename) as file:
+            with open(self.path + filename, encoding="utf-8") as file:
                 base_text = file.read()[:-1]
             for n in range(len(substitutions)):
                 base_text = re.sub(

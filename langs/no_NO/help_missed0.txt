@@ -1,0 +1,1 @@
+Sender deg en liste over sangene du bommet på i ditt siste spill med botten, kan bare brukes én gang per spill.

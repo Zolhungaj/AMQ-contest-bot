@@ -1,0 +1,1 @@
+Bruk: addadmin [brukernavn]| Legger til en ny administrator til botten.

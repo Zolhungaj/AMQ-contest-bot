@@ -1,0 +1,1 @@
+Bruk: setchattiness [0-100]| Setter sannsynligheten for at &1 snakker i visse situasjoner.

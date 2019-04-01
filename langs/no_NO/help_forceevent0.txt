@@ -1,0 +1,1 @@
+Bruk: forceevent| Setter timeren til 1, aktiverer dermed tidsbestemmede hendelser

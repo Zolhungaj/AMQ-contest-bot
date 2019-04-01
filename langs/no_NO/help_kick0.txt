@@ -1,0 +1,1 @@
+Bruk: kick [brukernavn] <grunn>| Sparker brukeren.
