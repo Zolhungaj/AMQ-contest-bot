@@ -8,6 +8,7 @@ import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from collections import defaultdict
 import time
 import traceback
 import random
@@ -98,6 +99,14 @@ class Game:
         self.recently_used_list = []
         self.last_round_list = None
         self.delay = 3
+        self.player_anime_answer = {}  # str to str, for spectators
+        self.player_anime_score = defaultdict(lambda: 0)  # str to int
+        self.player_song_answer = {}  # str to str
+        self.player_song_score = defaultdict(lambda: 0)  # str to int
+        self.player_artist_answer = {}
+        self.player_artist_score = defaultdict(lambda: 0)
+        self.answer_limit_upper = 3
+        self.answer_limit_lower = 0
 
     def set_chattiness(self, newpercentage):
         self.chattiness = newpercentage / 100
@@ -300,6 +309,33 @@ class Game:
                 self.auto_chat("answer_reveal", [self.lobby.last_song.anime])
             for p in self.lobby.players:
                 print("%s: %d" % (p.username, p.score))
+            # print(self.player_anime_answer)
+            # print(self.player_song_answer)
+            # print(self.player_artist_answer)
+            for p, a in self.player_anime_answer.items():
+                if a.lower() == self.lobby.last_song.anime.lower():
+                    self.player_anime_score[p] += 1
+                    # print("%s got the anime right", p)
+                else:
+                    # print("'%s' != '%s'", a, self.lobby.last_song.anime)
+                    self.player_anime_score[p] += 0
+            self.player_anime_answer = {}
+            for p, a in self.player_song_answer.items():
+                if a.lower() == self.lobby.last_song.name.lower():
+                    self.player_song_score[p] += 1
+                    # print("%s got the song right", p)
+                else:
+                    # print("'%s' != '%s'", a, self.lobby.last_song.name)
+                    self.player_song_score[p] += 0
+            self.player_song_answer = {}
+            for p, a in self.player_artist_answer.items():
+                if a.lower() == self.lobby.last_song.artist.lower():
+                    self.player_artist_score[p] += 1
+                    # print("%s got the artist right", p)
+                else:
+                    # print("'%s' != '%s'", a, self.lobby.last_song.artist)
+                    self.player_artist_score[p] += 0
+            self.player_artist_answer = {}
             if self.lobby.round == self.lobby.total_rounds:
                 self.state = 4
                 return
@@ -322,9 +358,49 @@ class Game:
             self.recently_used_list = []
             self.database.record_game(self.lobby.song_list, self.lobby.players)
             self.auto_chat("game_complete")
+            self.chat("bonus game scores:")
+            self.chat("anime guess")
+            self.print_scores(self.player_anime_score)
+            self.chat("song guess")
+            self.print_scores(self.player_song_score)
+            self.chat("artist guess")
+            self.print_scores(self.player_artist_score)
+            self.player_anime_score = defaultdict(lambda: 0)
+            self.player_song_score = defaultdict(lambda: 0)
+            self.player_artist_score = defaultdict(lambda: 0)
         except Exception:
             log_exceptions()
         self.state = 5
+
+    def print_scores(self, player_score_pair):
+        scores = []
+        names = []
+        for k, v in player_score_pair.items():
+            names.append(k)
+            scores.append(v)
+        sortedscores = []
+        sortednames = []
+        while len(scores) > 0:
+            maxscore = -1
+            maxpos = -1
+            for i in range(len(scores)):
+                if scores[i] > maxscore:
+                    maxpos = i
+                    maxscore = scores[i]
+            sortedscores.append(scores[maxpos])
+            sortednames.append(names[maxpos])
+            scores.pop(maxpos)
+            names.pop(maxpos)
+        pos = 1
+        prevscore = -1
+        toadd = 0
+        for i in range(len(sortedscores)):
+            if sortedscores[i] != prevscore:
+                pos += toadd
+                toadd = 0
+            prevscore = sortedscores[i]
+            toadd += 1
+            self.chat("%d. %s %d" % (pos, sortednames[i], sortedscores[i]))
 
     def finish_game(self):
         """Waits for the lobby to change"""
@@ -591,10 +667,18 @@ class Game:
         ret.append(self.msg_man.get_text("username") + truename)
         return ret
 
+    def is_answer_time(self):
+        box = self.driver.find_element_by_id("qpVideoHider")
+        if "hide" not in box.get_attribute("class"):
+            text = self.driver.find_element_by_id("qpHiderText")
+            return "Answers" == text.text
+        else:
+            return False
+
     def handle_command(self, user, command):
         try:
             print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote|elo", command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
@@ -608,7 +692,7 @@ class Game:
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|vote|elo", command)
+                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo", command)
                 if not match:
                     self.auto_chat("unknown_command")
                     return
@@ -684,9 +768,40 @@ class Game:
                     self.auto_chat("list_success", [user])
                     self.recently_used_list.append(user)
                 return
-            match = re.match(r"(?i)answer\s(.*)\s", command)
+            a = self.is_answer_time()
+            match = re.match(r"(?i)answer\s(.*)\s?[|]\s?(.*)\s?[|]\s?(.*)\s?", command)
             if match:
-                self.chat("not implemented")
+                if a:
+                    self.player_anime_answer[user] = match.group(1)
+                    self.player_song_answer[user] = match.group(2)
+                    self.player_artist_answer[user] = match.group(3)
+                else:
+                    self.chat("please submit your answer at \"Answers\"")
+                return
+            match = re.match(r"(?i)answeranime\s(.*)\s?", command)
+            if match:
+                if a:
+                    self.player_anime_answer[user] = match.group(1)
+                else:
+                    self.chat("please submit your answer at \"Answers\"")
+                return
+            match = re.match(r"(?i)answersong\s(.*)\s?", command)
+            if match:
+                if a:
+                    self.player_song_answer[user] = match.group(1)
+                else:
+                    self.chat("please submit your answer at \"Answers\"")
+                return
+            match = re.match(r"(?i)answerartist\s(.*)\s?", command)
+            if match:
+                if a:
+                    self.player_artist_answer[user] = match.group(1)
+                else:
+                    self.chat("please submit your answer at \"Answers\"")
+                return
+            match = re.match(r"(?i)answer\s", command)
+            if match:
+                self.chat("Usage: /answer anime|song|artist")
                 return
             match = re.match(r"(?i)vote\s\d+\s", command)
             if match:
