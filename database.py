@@ -425,6 +425,109 @@ class Database:
         )""", (game_id, song_id, ordinal))
         self.conn.commit()
 
+    def get_all_ratings(self):
+        res = self.conn.execute("""
+        SELECT DISTINCT(g.player_id), rating
+        FROM gametoplayer g
+        INNER JOIN elo e
+        ON e.player_id = g.player_id
+        ORDER BY rating DESC""")
+        return res.fetchall()
+
+    def get_total_games(self):
+        res = self.conn.execute("""
+        SELECT count(*) FROM game""")
+        return res.fetchone()[0]
+
+    def get_player_game_count(self, player_id):
+        res = self.conn.execute("""
+        SELECT count(*) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        return res.fetchone()[0]
+
+    def get_player_win_count(self, player_id):
+        res = self.conn.execute("""
+        SELECT count(*) FROM gametoplayer
+        WHERE player_id = ?
+        AND position = 1""", (player_id,))
+        return res.fetchone()[0]
+
+    def get_player_hit_count(self, player_id):
+        res = self.conn.execute("""
+        SELECT SUM(result) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        hit = res.fetchone()
+        if hit is None:
+            return 0
+        else:
+            return hit[0]
+
+    def get_player_miss_count(self, player_id):
+        res = self.conn.execute("""
+        SELECT SUM(miss_count) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        miss = res.fetchone()
+        if miss is None:
+            return 0
+        else:
+            return miss[0]
+
+    def get_player_song_count(self, player_id):
+        res = self.conn.execute("""
+        SELECT SUM(result) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        hit = res.fetchone()
+        res = self.conn.execute("""
+        SELECT SUM(miss_count) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        miss = res.fetchone()
+        if hit is None and miss is None:
+            return 0
+        elif hit is None:
+            return miss[0]
+        elif miss is None:
+            return hit[0]
+        else:
+            return hit[0]+miss[0]
+
+    def get_player_hit_rate(self, player_id):
+        res = self.conn.execute("""
+        SELECT SUM(result) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        hit = res.fetchone()
+        res = self.conn.execute("""
+        SELECT SUM(miss_count) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        miss = res.fetchone()
+        if hit is None or miss is None:
+            return "0.00%"
+        else:
+            return "%3.2f%%" % (hit[0]/(miss[0]+hit[0])*100)
+
+    def get_player_hit_miss_ratio(self, player_id):
+        res = self.conn.execute("""
+        SELECT SUM(result) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        hit = res.fetchone()
+        res = self.conn.execute("""
+        SELECT SUM(miss_count) FROM gametoplayer
+        WHERE player_id = ?""", (player_id,))
+        miss = res.fetchone()
+        if hit is None or miss is None:
+            return "0:0"
+        elif hit[0] == 0 and miss[0] == 0:
+            return "0:0"
+        elif hit[0] == miss[0]:
+            return "1:1"
+        elif hit[0] > 0 and miss[0] == 0:
+            return "1:0"
+        elif hit[0] == 0 and miss[0] > 0:
+            return "0:1"
+        elif hit[0] > miss[0]:
+            return "%3.2f:1" % (hit[0]/miss[0])
+        elif hit[0] < miss[0]:
+            return "1:%3.2f" % (miss[0]/hit[0])
+
     def get_elo(self, player_id):
         res = self.conn.execute("""
         SELECT rating FROM elo

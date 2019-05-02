@@ -1,1 +1,2 @@
 Welcome to the game &1, join the queue and we'll find some room when the game ends.
+ /answer anime|song|artist, to join the bonus games

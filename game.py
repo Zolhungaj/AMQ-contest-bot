@@ -107,6 +107,8 @@ class Game:
         self.player_artist_score = defaultdict(lambda: 0)
         self.answer_limit_upper = 3
         self.answer_limit_lower = 0
+        self.last_generated = -1
+        self.tiers = {}
 
     def set_chattiness(self, newpercentage):
         self.chattiness = newpercentage / 100
@@ -252,7 +254,7 @@ class Game:
             self.set_state_idle()
 
     def wait_for_ready(self):
-        print("wait for ready")
+        # print("wait for ready")
         self.lobby.scan_lobby()
         time_remaining = self.state_timer*self.tick_rate
         if self.lobby.player_count == 1:
@@ -307,8 +309,8 @@ class Game:
             self.driver.execute_script('skipController.toggle()')
             if random.random() < self.chattiness:
                 self.auto_chat("answer_reveal", [self.lobby.last_song.anime])
-            for p in self.lobby.players:
-                print("%s: %d" % (p.username, p.score))
+            # for p in self.lobby.players:
+            #    print("%s: %d" % (p.username, p.score))
             # print(self.player_anime_answer)
             # print(self.player_song_answer)
             # print(self.player_artist_answer)
@@ -504,7 +506,7 @@ class Game:
             # print(chat_window.text)
 
             for match in chat_messages[chat_pos:]:
-                print(match)
+                # print(match)
                 player_message = self.player_message_pattern.search(match)
                 join_as_player = None
                 join_as_spectator = None
@@ -579,7 +581,7 @@ class Game:
         try:
             match = self.banned_word_pattern.search(message.lower())
             if match:
-                print(match.group(0))
+                # print(match.group(0))
                 return True
             else:
                 return False
@@ -658,27 +660,98 @@ class Game:
             self.driver.execute_script(
                 'gameChat.kickSpectator("%s")' % username)
 
+    def generate_tiers(self):
+        """generates the tiers
+        by level:
+        Champion: the best player(s) on the bot
+        Diamond: top 5%
+        Platinum: top 20%
+        Gold: top 40%
+        Silver: top 80%
+        Bronze: top 99.9%
+        the bot: literally the worst players"""
+        if(self.last_generated < self.database.get_total_games()):
+            self.tiers["champion"] = -1
+            self.tiers["diamond"] = -1
+            self.tiers["platinum"] = -1
+            self.tiers["gold"] = -1
+            self.tiers["silver"] = -1
+            self.tiers["bronze"] = -1
+            self.tiers[self.username+"bot"] = -1
+            player_ratings = self.database.get_all_ratings()
+            total = len(player_ratings)
+            count = 0
+            for player_id, rating in player_ratings:
+                if(self.tiers["champion"] == -1 and count == 0):
+                    self.tiers["champion"] = rating
+                elif(self.tiers["diamond"] == -1 and count >= total*0.05):
+                    self.tiers["diamond"] = rating
+                elif(self.tiers["platinum"] == -1 and count >= total*0.2):
+                    self.tiers["platinum"] = rating
+                elif(self.tiers["gold"] == -1 and count >= total-total*0.4):
+                    self.tiers["gold"] = rating
+                elif(self.tiers["silver"] == -1 and count >= total*0.8):
+                    self.tiers["silver"] = rating
+                elif(self.tiers["bronze"] == -1 and count == total-2):
+                    self.tiers["bronze"] = rating
+                elif(count == total-1):
+                    self.tiers[self.username+"bot"] = rating
+                count += 1
+
+    def elo_to_tier(self, elo):
+        """returns the tier equivalent"""
+        self.generate_tiers()
+        if(elo >= self.tiers["champion"]):
+            return "Champion"
+        elif(elo >= self.tiers["diamond"]):
+            return "Diamond"
+        elif(elo >= self.tiers["platinum"]):
+            return "Platinum"
+        elif(elo >= self.tiers["gold"]):
+            return "Gold"
+        elif(elo >= self.tiers["silver"]):
+            return "Silver"
+        elif(elo >= self.tiers["bronze"]):
+            return "Bronze"
+        elif(elo >= self.tiers[self.username+"bot"]):
+            return self.username
+        else:
+            return "Undefined"
+
     def profile(self, username):
         id = self.database.get_player_id(username)
         if id is None:
-            return None
-        ret = []
+            self.auto_chat("profile_unknown")
+            return
         truename = self.database.get_player_truename(id)
-        ret.append(self.msg_man.get_text("username") + truename)
-        return ret
+        self.auto_chat("profile_username", [truename])
+        elo = self.database.get_or_create_elo(id)
+        self.auto_chat("profile_elo", [elo, self.elo_to_tier(elo)])
+        play_count = self.database.get_player_game_count(id)
+        self.auto_chat("profile_play_count", [play_count])
+        wins = self.database.get_player_win_count(id)
+        self.auto_chat("profile_wins", [wins])
+        song_count = self.database.get_player_song_count(id)
+        self.auto_chat("profile_song_count", [song_count])
+        hit_count = self.database.get_player_hit_count(id)
+        self.auto_chat("profile_hit_count", [hit_count])
+        hit_rate = self.database.get_player_hit_rate(id)
+        self.auto_chat("profile_hit_rate", [hit_rate])
 
     def is_answer_time(self):
         box = self.driver.find_element_by_id("qpVideoHider")
         if "hide" not in box.get_attribute("class"):
             text = self.driver.find_element_by_id("qpHiderText")
-            return "Answers" == text.text
+            return ("Answers" == text.text
+                    or "0" == text.text
+                    or "1" == text.text)
         else:
             return False
 
     def handle_command(self, user, command):
         try:
-            print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo", command)
+            # print("Command detected: %s" % command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer\s|answeranime|answersong|answerartist|vote|elo|profile", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
@@ -692,7 +765,7 @@ class Game:
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo", command)
+                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo|profile", command)
                 if not match:
                     self.auto_chat("unknown_command")
                     return
@@ -729,10 +802,13 @@ class Game:
                     self.chat(self.msg_man.get_text("about_joke_intro") + " " +
                               self.msg_man.get_text("about_joke"))
                 return
+            if command.lower() == "profile":
+                self.profile(user)
+                return
             if command.lower() == "elo":
                 id = self.database.get_player_id(user)
-                elo = str(self.database.get_or_create_elo(id))
-                self.auto_chat("elo", [elo])
+                elo = self.database.get_or_create_elo(id)
+                self.auto_chat("elo", [user, elo, self.elo_to_tier(elo)])
                 return
             if command.lower() == "missed":
                 if user in self.player_records:
@@ -824,6 +900,13 @@ class Game:
                     return
             if command.lower() == "forceevent":
                 self.state_timer = 1
+                return
+            match = re.match(r"(?i)elo\s@?([^ ]*)\s?", command)
+            if match:
+                username = match.group(1)
+                id = self.database.get_player_id(username)
+                elo = self.database.get_or_create_elo(id)
+                self.auto_chat("elo", [username, elo, self.elo_to_tier(elo)])
                 return
             if not self.database.is_administrator(user):
                 self.auto_chat("permission_denied", [user])

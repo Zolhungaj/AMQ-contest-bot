@@ -1,0 +1,1 @@
+Total songs played: &1

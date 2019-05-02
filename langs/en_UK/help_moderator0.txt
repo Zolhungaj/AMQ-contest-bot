@@ -1,1 +1,1 @@
-Moderator commands: forceevent, kick, setchattiness
+Moderator commands: forceevent, kick, setchattiness, elo

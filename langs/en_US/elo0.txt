@@ -1,1 +1,1 @@
-Your Elo rating is: &1
+&1's elo rating is: &2 (&3)
