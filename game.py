@@ -750,13 +750,16 @@ class Game:
 
     def leaderboard(self, top=10):
         self.auto_chat("leaderboard", [top])
-        position = 0
+        position = 1
+        pos_to_add = 0
         last_score = 1000000
         for name, result in self.database.get_result_leaderboard_truename(top):
             if (result < last_score):
-                position += 1
+                position += pos_to_add
+                pos_to_add = 0
                 last_score = result
             self.chat("%2d: %20s | %3d" % (position, name, result))
+            pos_to_add += 1
 
     def handle_command(self, user, command):
         try:

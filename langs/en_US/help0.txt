@@ -1,1 +1,1 @@
-Common commands: help, about, missed, list, elo, answer, answeranime, answersong, answerartist, profile
+Common commands: help, about, missed, list, elo, answer, answeranime, answersong, answerartist, profile, leaderboard
