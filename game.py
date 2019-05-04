@@ -748,10 +748,20 @@ class Game:
         else:
             return False
 
+    def leaderboard(self, top=10):
+        self.auto_chat("leaderboard", [top])
+        position = 0
+        last_score = 1000000
+        for name, result in self.database.get_result_leaderboard_truename(top):
+            if (result < last_score):
+                position += 1
+                last_score = result
+            self.chat("%2d: %20s | %3d" % (position, name, result))
+
     def handle_command(self, user, command):
         try:
             # print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer\s|answeranime|answersong|answerartist|vote|elo|profile", command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer\s|answeranime|answersong|answerartist|vote|elo|profile|leaderboard", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
@@ -765,7 +775,7 @@ class Game:
             match = re.match(r"(?i)help\s([^ ]*)", command)
             if match:
                 command = match.group(1).lower()
-                match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo|profile", command)
+                match = re.match(r"(?i)leaderboard|stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer|answeranime|answersong|answerartist|vote|elo|profile", command)
                 if not match:
                     self.auto_chat("unknown_command")
                     return
@@ -804,6 +814,9 @@ class Game:
                 return
             if command.lower() == "profile":
                 self.profile(user)
+                return
+            if command.lower() == "leaderboard":
+                self.leaderboard()
                 return
             if command.lower() == "elo":
                 id = self.database.get_player_id(user)
@@ -887,6 +900,9 @@ class Game:
             if not self.database.is_moderator(user):
                 self.auto_chat("permission_denied", [user])
                 return
+            match = re.match(r"(?i)leaderboard\s(\d+)\s?", command)
+            if match:
+                self.leaderboard(int(match.group(1)))
             match = re.match(r"(?i)setchattiness\s(-?\d+)", command)
             if match:
                 self.set_chattiness(int(match.group(1)))

@@ -23,7 +23,7 @@ class MessageManager:
                 "profile_username": 1, "profile_unknown": 1,
                 "profile_elo": 1, "profile_play_count": 1, "profile_wins": 1,
                 "profile_song_count": 1, "profile_hit_count": 1,
-                "profile_hit_rate": 1}
+                "profile_hit_rate": 1, "leaderboard": 1}
     langpack = "./langs/"
 
     def __init__(self, directory="en_UK"):
