@@ -835,7 +835,10 @@ class Game:
                 self.profile(user)
                 return
             if command.lower() == "leaderboard":
-                self.leaderboard()
+                if self.enable_leaderboard:
+                    self.leaderboard()
+                else:
+                    self.auto_chat("leaderboard_disabled")
                 return
             if command.lower() == "elo":
                 id = self.database.get_player_id(user)
