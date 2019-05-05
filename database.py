@@ -567,20 +567,22 @@ class Database:
 
     def get_result_leaderboard_player_id(self, top=10):
         res = self.conn.execute("""
-        SELECT DISTINCT(player_id), result
-        from gametoplayer
-        order by result desc
-        limit ?""", (top,))
+        SELECT player_id, MAX(result)
+        FROM gametoplayer
+        GROUP BY player_id
+        ORDER BY result DESC
+        LIMIT ?""", (top,))
         return res.fetchall()
 
     def get_result_leaderboard_truename(self, top=10):
         res = self.conn.execute("""
-        SELECT DISTINCT(truename), result
-        from player
-        join gametoplayer
-        on player_id=id
-        order by result desc
-        limit ?""", (top,))
+        SELECT truename, MAX(result)
+        FROM player
+        JOIN gametoplayer
+        ON player_id=id
+        GROUP BY player_id
+        ORDER BY result DESC
+        LIMIT ?""", (top,))
         return res.fetchall()
 
     def record_game(self, song_list, players):
