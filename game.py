@@ -44,24 +44,25 @@ class Game:
 
     def __init__(self, config_file, admins=[]):
         self.admins = admins
+        self.banned_players_list = []
+        self.enable_leaderboard = False
         with open(config_file) as f:
             config = f.read()
             config = config.split("\n")
         self.code = config[0]
         self.geckodriver_path = config[1]
         self.username = config[2]
-        self.admins.append(self.username)
         self.password = config[3]
         self.room_name = config[4]
         self.room_password = config[5]
         self.lang = config[6]
         self.banned_word_path = config[7]
         self.chattiness = int(config[8]) / 100
-        self.banned_players_list = []
-
         self.banned_players_file = config[9]
         self.admins_file = config[10]
         self.db_file = config[11]
+        self.read_config_file(config_file)
+        self.admins.append(self.username)
         self.database = Database(self.db_file)
         with open(self.admins_file) as f:
             for line in f.readlines():
@@ -109,6 +110,21 @@ class Game:
         self.answer_limit_lower = 0
         self.last_generated = -1
         self.tiers = {}
+
+    def read_config_file(self, config_file):
+        with open(config_file) as f:
+            config = f.read()
+        match = re.search(r"(?im)^enable_leaderboard\s?=\s?(true|false)", config)
+        if match:
+            if match.group(1).lower() == "true":
+                print("ENABLE_LEADERBOARD=TRUE")
+                self.enable_leaderboard = True
+            else:
+                print("ENABLE_LEADERBOARD=FALSE")
+                self.enable_leaderboard = False
+        else:
+            print("ENABLE_LEADERBOARD=DEFAULT(FALSE)")
+            self.enable_leaderboard = False
 
     def set_chattiness(self, newpercentage):
         self.chattiness = newpercentage / 100
