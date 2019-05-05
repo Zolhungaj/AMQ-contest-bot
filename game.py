@@ -680,6 +680,8 @@ class Game:
         """generates the tiers
         by level:
         Champion: the best player(s) on the bot
+        Grandmaster: top 0.5%
+        Master: top 2%
         Diamond: top 5%
         Platinum: top 20%
         Gold: top 40%
@@ -688,6 +690,8 @@ class Game:
         the bot: literally the worst players"""
         if(self.last_generated < self.database.get_total_games()):
             self.tiers["champion"] = -1
+            self.tiers["grandmaster"] = -1
+            self.tiers["master"] = -1
             self.tiers["diamond"] = -1
             self.tiers["platinum"] = -1
             self.tiers["gold"] = -1
@@ -700,13 +704,17 @@ class Game:
             for player_id, rating in player_ratings:
                 if(self.tiers["champion"] == -1 and count == 0):
                     self.tiers["champion"] = rating
+                elif(self.tiers["grandmaster"] == -1 and count >= total*0.005):
+                    self.tiers["grandmaster"] = rating
+                elif(self.tiers["master"] == -1 and count >= total*0.02):
+                    self.tiers["master"] = rating
                 elif(self.tiers["diamond"] == -1 and count >= total*0.05):
                     self.tiers["diamond"] = rating
-                elif(self.tiers["platinum"] == -1 and count >= total*0.2):
+                elif(self.tiers["platinum"] == -1 and count >= total*0.20):
                     self.tiers["platinum"] = rating
-                elif(self.tiers["gold"] == -1 and count >= total-total*0.4):
+                elif(self.tiers["gold"] == -1 and count >= total-total*0.40):
                     self.tiers["gold"] = rating
-                elif(self.tiers["silver"] == -1 and count >= total*0.8):
+                elif(self.tiers["silver"] == -1 and count >= total*0.80):
                     self.tiers["silver"] = rating
                 elif(self.tiers["bronze"] == -1 and count == total-2):
                     self.tiers["bronze"] = rating
@@ -719,6 +727,10 @@ class Game:
         self.generate_tiers()
         if(elo >= self.tiers["champion"]):
             return "Champion"
+        elif(elo >= self.tiers["grandmaster"]):
+            return "Grandmaster"
+        elif(elo >= self.tiers["master"]):
+            return "Master"
         elif(elo >= self.tiers["diamond"]):
             return "Diamond"
         elif(elo >= self.tiers["platinum"]):
