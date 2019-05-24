@@ -320,8 +320,9 @@ class Game:
         try:
             self.lobby.scan_lobby()
         except Exception:
+            # this happens if everyone leaves during the reveal phase
             log_exceptions()
-            self.chat("Oh Fiddlesticks! critical error")
+            self.chat("Oh Fiddlesticks! aborting")
             self.abort_game()
             return
         if self.lobby.round > self.last_round:
