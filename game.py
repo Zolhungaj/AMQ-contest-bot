@@ -317,7 +317,13 @@ class Game:
             self.exchange_players()
 
     def run_game(self):
-        self.lobby.scan_lobby()
+        try:
+            self.lobby.scan_lobby()
+        except Exception:
+            log_exceptions()
+            self.chat("Oh Fiddlesticks! critical error")
+            self.abort_game()
+            return
         if self.lobby.round > self.last_round:
             self.last_round = self.lobby.round
             self.driver.execute_script('skipController.toggle()')
