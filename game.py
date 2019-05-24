@@ -198,6 +198,8 @@ class Game:
         room_name_input.send_keys(room_name)
         start_room = driver.find_element_by_id("mhHostButton")
         start_room.click()
+        time.sleep(self.delay)
+        driver.execute_script("lobby.changeToSpectator(selfName);")
 
     def run(self):
         self.auto_chat("hello_world")
@@ -232,7 +234,7 @@ class Game:
             self.auto_chat("idle")
             self.set_state_time(self.idle_time)
         self.lobby.scan_lobby()
-        if self.lobby.player_count > 1:
+        if self.lobby.player_count > 0:
             self.state = 1
             self.set_state_time(self.waiting_time)
             self.waiting_time_limit = 0
@@ -265,15 +267,15 @@ class Game:
             self.state = 2
             return
         self.lobby.scan_lobby()
-        self.waiting_time_limit = int(((self.lobby.player_count-1)*(self.waiting_time/(self.max_players-1)) - 10)/self.tick_rate)
-        if self.lobby.player_count == 1:
+        self.waiting_time_limit = int(((self.lobby.player_count)*(self.waiting_time/(self.max_players)) - 10)/self.tick_rate)
+        if self.lobby.player_count == 0:
             self.set_state_idle()
 
     def wait_for_ready(self):
         # print("wait for ready")
         self.lobby.scan_lobby()
         time_remaining = self.state_timer*self.tick_rate
-        if self.lobby.player_count == 1:
+        if self.lobby.player_count == 0:
             self.set_state_idle()
             return
         if self.lobby.all_ready():
@@ -290,7 +292,7 @@ class Game:
                 self.chat(str(int(time_remaining)))
 
     def start_game(self):
-        self.driver.execute_script("lobby.fireMainButtonEvent();")
+        self.driver.execute_script("lobby.fireMainButtonEvent(true);")
         time.sleep(self.delay)
         try:
             pop_up = self.driver.find_element_by_class_name("swal2-container")
@@ -357,7 +359,7 @@ class Game:
             if self.lobby.round == self.lobby.total_rounds:
                 self.state = 4
                 return
-        if self.lobby.player_count < 2:
+        if self.lobby.player_count < 1:
             self.abort_game()
 
     def abort_game(self):
@@ -444,7 +446,7 @@ class Game:
         self.auto_chat("exchange_players")
         names = [p.username for p in players if p.username != self.username]
         chosen = []
-        if queue_size >= self.max_players-1:
+        if queue_size >= self.max_players:
             chosen = names
         else:
             for m in range(queue_size):
