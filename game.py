@@ -81,7 +81,7 @@ class Game:
         self.driver = webdriver.Firefox(executable_path=self.geckodriver_path)
         self.state = 0
         self.tick_rate = 0.5
-        self.idle_time = 40
+        self.idle_time = 30
         self.waiting_time = 45
         self.waiting_time_limit = 0
         self.ready_wait_time = 15
@@ -110,6 +110,7 @@ class Game:
         self.answer_limit_lower = 0
         self.last_generated = -1
         self.tiers = {}
+        self.max_chat_message_length = 150
 
     def read_config_file(self, config_file):
         with open(config_file) as f:
@@ -200,6 +201,7 @@ class Game:
         start_room.click()
         time.sleep(self.delay)
         driver.execute_script("lobby.changeToSpectator(selfName);")
+        self.max_chat_message_length = driver.execute_script("return gameChat.MAX_MESSAGE_LENGTH")
 
     def run(self):
         self.auto_chat("hello_world")
@@ -220,6 +222,8 @@ class Game:
             #    # skipController.toggle()
             self.scan_chat()
             self.send_backlog()
+            if self.state_timer % 5 == 0:
+                self.driver.execute_script("document.getElementsByTagName('body')[0].click();")
             self.state_timer -= 1
             self.silent_counter -= 1
             if self.silent_counter < 0:
@@ -232,6 +236,7 @@ class Game:
     def idle(self):
         if self.state_timer == 0:
             self.auto_chat("idle")
+
             self.set_state_time(self.idle_time)
         self.lobby.scan_lobby()
         if self.lobby.player_count > 0:
@@ -339,30 +344,48 @@ class Game:
             # print(self.player_anime_answer)
             # print(self.player_song_answer)
             # print(self.player_artist_answer)
+            correct_players = []
+            was_wrong = False
             for p, a in self.player_anime_answer.items():
+                if a == "":
+                    continue
                 if a.lower() == self.lobby.last_song.anime.lower():
                     self.player_anime_score[p] += 1
-                    # print("%s got the anime right", p)
+                    correct_players.append(p)
                 else:
-                    # print("'%s' != '%s'", a, self.lobby.last_song.anime)
+                    was_wrong = True
                     self.player_anime_score[p] += 0
             self.player_anime_answer = {}
+            if len(correct_players) > 0:
+                self.chat("anime++ " + " ".join(correct_players))
+            elif was_wrong:
+                self.chat(self.lobby.last_song.anime)
+            correct_players = []
             for p, a in self.player_song_answer.items():
+                if a == "":
+                    continue
                 if a.lower() == self.lobby.last_song.name.lower():
                     self.player_song_score[p] += 1
-                    # print("%s got the song right", p)
+                    correct_players.append(p)
                 else:
                     # print("'%s' != '%s'", a, self.lobby.last_song.name)
                     self.player_song_score[p] += 0
             self.player_song_answer = {}
+            if len(correct_players) > 0:
+                self.chat("song++ " + " ".join(correct_players))
+            correct_players = []
             for p, a in self.player_artist_answer.items():
+                if a == "":
+                    continue
                 if a.lower() == self.lobby.last_song.artist.lower():
                     self.player_artist_score[p] += 1
-                    # print("%s got the artist right", p)
+                    correct_players.append(p)
                 else:
                     # print("'%s' != '%s'", a, self.lobby.last_song.artist)
                     self.player_artist_score[p] += 0
             self.player_artist_answer = {}
+            if len(correct_players) > 0:
+                self.chat("artist++ " + " ".join(correct_players))
             if self.lobby.round == self.lobby.total_rounds:
                 self.state = 4
                 return
@@ -385,13 +408,20 @@ class Game:
             self.recently_used_list = []
             self.database.record_game(self.lobby.song_list, self.lobby.players)
             self.auto_chat("game_complete")
-            self.chat("bonus game scores:")
-            self.chat("anime guess")
-            self.print_scores(self.player_anime_score)
-            self.chat("song guess")
-            self.print_scores(self.player_song_score)
-            self.chat("artist guess")
-            self.print_scores(self.player_artist_score)
+            i = len(self.player_anime_score)
+            i += len(self.player_song_score)
+            i += len(self.player_artist_score)
+            if i > 0:
+                self.chat("bonus game scores:")
+                if len(self.player_anime_score) > 0:
+                    self.chat("anime guess")
+                    self.print_scores(self.player_anime_score)
+                if len(self.player_song_score) > 0:
+                    self.chat("song guess")
+                    self.print_scores(self.player_song_score)
+                if len(self.player_artist_score) > 0:
+                    self.chat("artist guess")
+                    self.print_scores(self.player_artist_score)
             self.player_anime_score = defaultdict(lambda: 0)
             self.player_song_score = defaultdict(lambda: 0)
             self.player_artist_score = defaultdict(lambda: 0)
@@ -498,15 +528,34 @@ class Game:
         """Sends a message through the chat
         """
         try:
-            chatbox = self.driver.find_element_by_id("gcInput")
-            chatbox.send_keys(message)
-            chatbox.send_keys(Keys.ENTER)
+            # chatbox = self.driver.find_element_by_id("gcInput")
+            # chatbox.send_keys(message)
+            # chatbox.send_keys(Keys.ENTER)
+            msg = message[:150]
+            self.driver.execute_script("""
+            socket.sendCommand(
+                {
+                    type: "lobby",
+                    command: "game chat message",
+                    data:
+                    {
+                        msg: arguments[0]
+                    }
+                }
+            );""", msg)
             self.log.chat_out(self.msg_man.get_text("log_chat_out", [message]))
         except Exception:
             log_exceptions()
 
     def auto_chat(self, message_name, arguments=[]):
         self.chat(self.msg_man.get_text(message_name, arguments))
+
+    def true_log_chat(self, message):
+        try:
+            with open(self.username + "-true.log", "a", encoding="utf-8") as f:
+                f.write(message + "\n")
+        except Exception:
+            pass
 
     def scan_chat(self):
         """
@@ -531,7 +580,7 @@ class Game:
             # print(chat_window.text)
 
             for match in chat_messages[chat_pos:]:
-                # print(match)
+                self.true_log_chat(match)
                 player_message = self.player_message_pattern.search(match)
                 join_as_player = None
                 join_as_spectator = None
