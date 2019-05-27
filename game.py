@@ -222,11 +222,10 @@ class Game:
             #    # skipController.toggle()
             self.scan_chat()
             self.send_backlog()
-            if self.state_timer % 5 == 0:
-                self.driver.execute_script("document.getElementsByTagName('body')[0].click();")
             self.state_timer -= 1
             self.silent_counter -= 1
             if self.silent_counter < 0:
+                self.driver.execute_script("document.getElementsByTagName('body')[0].click();")
                 for u in self.kick_list:
                     self.silent_kick(u)
                 self.silent_counter = int(5/self.tick_rate)
@@ -235,7 +234,7 @@ class Game:
 
     def idle(self):
         if self.state_timer == 0:
-            self.auto_chat("idle")
+            #self.auto_chat("idle")
 
             self.set_state_time(self.idle_time)
         self.lobby.scan_lobby()
@@ -850,10 +849,12 @@ class Game:
     def handle_command(self, user, command):
         try:
             # print("Command detected: %s" % command)
-            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer\s|answeranime|answersong|answerartist|vote|elo|profile|leaderboard", command)
+            match = re.match(r"(?i)stop|addadmin|addmoderator|help|kick|ban|about|forceevent|missed|setchattiness|list|answer\s|answeranime|answersong|answerartist|vote|elo|profile|leaderboard|ping", command)
             if not match:
                 self.auto_chat("unknown_command")
                 return
+            if command == "ping":
+                self.chat("Pong!")
             if command == "help":
                 self.auto_chat("help")
                 if self.database.is_moderator(user):
