@@ -1,6 +1,6 @@
 from player import Player
 from song import Song
-
+import time
 
 class Lobby:
     def remove_player(self, username, reason):
@@ -72,16 +72,22 @@ class GameLobby(Lobby):
             self.song_list.append(song)
             self.last_song = song
             for player in self.players:
-                status = self.driver.find_element_by_id("qpAvatar-%s" % player.username)
-                if "disabled" in status.get_attribute("class"):
-                    self.remove_player(player.username, "Left the game")
-                answer = status.find_element_by_class_name("qpAvatarAnswerText").text
-                correct = status.find_element_by_class_name("qpAvatarAnswerContainer")
-                score = status.find_element_by_class_name("qpAvatarPointText").text
-                if "rightAnswer" in correct.get_attribute("class"):
-                    player.correct_songs.append([song, answer])
-                elif "wrongAnswer" in correct.get_attribute("class"):
-                    player.wrong_songs.append([song, answer])
+                for n in range(5):
+                    status = self.driver.find_element_by_id("qpAvatar-%s" % player.username)
+                    if "disabled" in status.get_attribute("class"):
+                        self.remove_player(player.username, "Left the game")
+                    answer = status.find_element_by_class_name("qpAvatarAnswerText").text
+                    correct = status.find_element_by_class_name("qpAvatarAnswerContainer")
+                    score = status.find_element_by_class_name("qpAvatarPointText").text
+                    if "rightAnswer" in correct.get_attribute("class"):
+                        player.correct_songs.append([song, answer])
+                    elif "wrongAnswer" in correct.get_attribute("class"):
+                        player.wrong_songs.append([song, answer])
+                    else:
+                        print("ye mystical race condition has been solved")
+                        time.sleep(0.2)
+                        continue
+                    break
                 player.score = int(score)
 
     def verify_players(self):
