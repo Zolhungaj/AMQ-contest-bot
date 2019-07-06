@@ -700,6 +700,22 @@ class Game:
         except Exception:
             log_exceptions()
 
+    def check_for_disconnect(self):
+        body = self.driver.find_element_by_tag_name("body")
+        return "swal2-shown" in body.get_attribute("class")
+
+    def handle_popup(self, accept=True):
+        try:
+            self.tick()
+            pop_up = self.driver.find_element_by_class_name("swal2-container")
+            if accept:
+                button = pop_up.find_element_by_class_name("swal2-confirm")
+            else:
+                button = pop_up.find_element_by_class_name("swal2-cancel")
+            button.click()
+        except Exception:
+            log_exceptions()
+
     def kick_player(self, username, reason=None, issuer=None):
         try:
             reason = reason or self.msg_man.get_text("something")
@@ -709,6 +725,7 @@ class Game:
                     self.lobby.remove_player(username, reason)
                     self.driver.execute_script(
                         'lobby.kickPlayer("%s")' % username)
+                    self.handle_popup()
                     self.auto_chat("kick_chat", [username, reason])
                     self.message_player(username,
                                         self.msg_man.get_text("kick_pm",
@@ -716,6 +733,7 @@ class Game:
                 elif username not in [p.username for p in self.lobby.players]:
                     self.driver.execute_script(
                         'gameChat.kickSpectator("%s")' % username)
+                    self.handle_popup()
                     self.auto_chat("kick_chat", [username, reason])
                     self.message_player(username,
                                         self.msg_man.get_text("kick_pm",
@@ -727,11 +745,33 @@ class Game:
             log_exceptions()
 
     def silent_kick(self, username):
+        spectator_list = [s.lower() for s in self.get_spectators()]
+        print(spectator_list)
         if self.state < 3:
-            self.driver.execute_script('lobby.kickPlayer("%s")' % username)
-        else:
+            player_list = [player.username.lower() for player in self.lobby.all_players()]
+            if username.lower() in spectator_list or username.lower() in player_list:
+                self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+                self.handle_popup()
+        elif username.lower() in spectator_list:
             self.driver.execute_script(
                 'gameChat.kickSpectator("%s")' % username)
+            self.handle_popup()
+
+    def get_spectators(self):
+        self.driver.execute_script("gameChat.viewSpectators()")
+        spectator_list = self.driver.find_element_by_id("gcSpectatorList")
+        name_list = spectator_list.find_elements_by_tag_name("h3")
+        ret = [name.text for name in name_list]
+        self.driver.execute_script("gameChat.viewChat()")
+        return ret
+
+    def get_queue(self):
+        self.driver.execute_script("gameChat.viewQueue()")
+        spectator_list = self.driver.find_element_by_id("gcQueueList")
+        name_list = spectator_list.find_elements_by_tag_name("h3")
+        ret = [name.text for name in name_list]
+        self.driver.execute_script("gameChat.viewChat()")
+        return ret
 
     def generate_tiers(self):
         """generates the tiers
@@ -999,7 +1039,7 @@ class Game:
             match = re.match(r"(?i)setchattiness\s(-?\d+)", command)
             if match:
                 self.set_chattiness(int(match.group(1)))
-            match = re.match(r"(?i)kick\s@?([^ ]*)(?:\s(.*))", command)
+            match = re.match(r"(?i)kick\s@?([^ ]*)(?:\s?(.*))", command)
             if match:
                 username = match.group(1)
                 reason = match.group(2)
@@ -1035,7 +1075,7 @@ class Game:
             if match:
                 self.database.add_moderator(match.group(1), user)
                 return
-            match = re.match(r"(?i)ban\s@?([^ ]*)(?:\s(.*))?", command)
+            match = re.match(r"(?i)ban\s@?([^ ]*)(?:\s?(.*))", command)
             if match:
                 username = match.group(1)
                 reason = match.group(2)
