@@ -758,12 +758,15 @@ class Game:
             self.handle_popup()
 
     def get_spectators(self):
-        self.driver.execute_script("gameChat.viewSpectators()")
-        spectator_list = self.driver.find_element_by_id("gcSpectatorList")
-        name_list = spectator_list.find_elements_by_tag_name("h3")
-        ret = [name.text for name in name_list]
-        self.driver.execute_script("gameChat.viewChat()")
-        return ret
+        try:
+            self.driver.execute_script("gameChat.viewSpectators()")
+            spectator_list = self.driver.find_element_by_id("gcSpectatorList")
+            name_list = spectator_list.find_elements_by_tag_name("h3")
+            ret = [name.text for name in name_list]
+            self.driver.execute_script("gameChat.viewChat()")
+            return ret
+        except Exception:
+            return []
 
     def get_queue(self):
         self.driver.execute_script("gameChat.viewQueue()")
