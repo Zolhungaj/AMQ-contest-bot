@@ -1,5 +1,11 @@
 class Matchmaking:
-    pass
+    def __init__(self, target, entries=[]):
+        self.target = target
+        self.entries = entries
+
+    def add(self, name, rating, desperation=0):
+        if name not in [entry.name for entry in entries]:
+            self.entries.append(MatchMakingEntry(name, rating, desperation))
 
 
 class MatchMakingEntry:
