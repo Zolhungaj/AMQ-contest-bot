@@ -7,6 +7,22 @@ class Matchmaking:
         if name not in [entry.name for entry in entries]:
             self.entries.append(MatchMakingEntry(name, rating, desperation))
 
+    def remove(self, name):
+        self.entries = [entry for entry in self.entries if entry.name != name]
+
+    def match(self):
+        for entry in self.entries:
+            result = [entry]
+            for other in self.entries:
+                if other.name == entry.name:
+                    continue
+                if entry.match(other):
+                    result.append(other)
+                if len(result) == target:
+                    return [res.name for res in result]
+            entry.increase_desperation()
+        return None
+
 
 class MatchMakingEntry:
     def __init__(self, name, rating, desperation=0):
