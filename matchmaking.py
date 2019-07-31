@@ -21,22 +21,23 @@ class Matchmaking:
                     continue
                 if entry.match(other):
                     result.append(other)
-                if len(result) == target:
+                if len(result) == self.target:
                     return [res.name for res in result]
             entry.increase_desperation()
         return None
 
     def count(self):
-        return len(entries)
+        return len(self.entries)
 
     def active(self):
-        return self.count() >= self.target()
+        return self.count() >= self.target
 
     def __str__(self):
         ret = "Matchmaking: {\n"
         count = 0
         for entry in self.entries:
-            ret += "%d: %s,\n"
+            ret += "%d: %s,\n" % (count, entry)
+            count += 1
         ret += "}"
         return ret
 
@@ -76,3 +77,4 @@ if __name__ == "__main__":
             input()
             for name in match:
                 matchmaking.remove(name)
+    print(matchmaking)
