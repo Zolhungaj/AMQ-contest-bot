@@ -81,7 +81,7 @@ class Game:
         self.driver = webdriver.Firefox(executable_path=self.geckodriver_path)
         self.state = 0
         self.tick_rate = 0.5
-        self.idle_time = 30
+        self.idle_time = 3600
         self.waiting_time = 45
         self.waiting_time_limit = 0
         self.ready_wait_time = 15
@@ -234,7 +234,7 @@ class Game:
 
     def idle(self):
         if self.state_timer == 0:
-            #self.auto_chat("idle")
+            self.auto_chat("idle")
 
             self.set_state_time(self.idle_time)
         self.lobby.scan_lobby()
