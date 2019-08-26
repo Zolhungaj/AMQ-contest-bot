@@ -153,6 +153,22 @@ class WaitingLobby(Lobby):
                     self.ready_players[n] = False
         self.player_count = len([p for p in self.players if p is not None])
 
+    def scan_lobby_many(self):
+        players = []
+        ready_players = []
+        containers = self.driver.find_elements_by_class_name("lobbyAvatar")
+        for element in containers:
+            name_container = element.find_element_by_class_name("lobbyAvatarNameContainterInner")
+            name = name_container.find_element_by_tag_name("h2").text
+            level_container = element.find_element_by_class_name("lobbyAvatarLevelContainer")
+            level = int(level_container.find_element_by_tag_name("h3").text)
+            ready = "lbready" in element.get_attribute("class")
+            players.append(Player(name, level))
+            ready_players.append(ready)
+        self.players = players
+        self.ready_players = ready_players
+        self.player_count = len(players)
+
     def get_unready(self):
         not_ready = []
         for n in range(self.player_max):
