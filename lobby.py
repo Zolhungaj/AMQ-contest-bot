@@ -90,6 +90,76 @@ class GameLobby(Lobby):
                     break
                 player.score = int(score)
 
+    def scan_lobby_many(self):
+        hider = self.driver.find_element_by_id("qpAnimeNameHider")
+        if "hide" not in hider.get_attribute("class"):
+            playround = True
+        else:
+            playround = False
+        self.round = int(
+            self.driver.find_element_by_id("qpCurrentSongCount").text)
+        self.total_rounds = int(
+            self.driver.find_element_by_id("qpTotalSongCount").text)
+        if playround:
+            hider_text = self.driver.find_element_by_id("qpHiderText").text
+            if hider_text == "Answers":
+                self.answer = True
+                self.playback = False
+            elif hider_text == "":
+                self.answer = False
+                # self.playback = True
+            elif "Loading" in hider_text:
+                pass
+            else:
+                self.answer = False
+                self.playback = False
+                self.time = int(hider_text)
+        elif self.round > self.last_round:
+            self.playback = True
+            self.last_round = self.round
+            anime_name = self.driver.find_element_by_id("qpAnimeName").text
+            song_name = self.driver.find_element_by_id("qpSongName").text
+            artist = self.driver.find_element_by_id("qpSongArtist").text
+            song_type = self.driver.find_element_by_id("qpSongType").text
+            link = self.driver.find_element_by_id("qpSongVideoLink").get_attribute("href")
+            song = Song(anime_name, song_name, artist, song_type, link)
+            self.song_list.append(song)
+            self.last_song = song
+            containers = self.driver.find_elements_by_class_name("qpAvatarContainer")
+            for element in containers:
+                answer_container = element.find_element_by_class_name("qpAvatarAnswerContainer")
+                for i in range(5):
+                    if "rightAnswer" in answer_container.get_attribute("class"):
+                        correct = True
+                    elif "wrongAnswer" in answer_container.get_attribute("class"):
+                        correct = False
+                    else:
+                        print("ye mystical race condition has been solved")
+                        time.sleep(0.2)
+                        continue
+                    break
+                score = int(element.find_element_by_class_name("qpAvatarPointText").text)
+                level = int(element.find_element_by_class_name("qpAvatarLevelText").text)
+                name_container = element.find_element_by_class_name("qpAvatarNameContainer")
+                name = name_container.find_element_by_tag_name("span").text
+                player = self.get_player(name)
+                if not player:
+                    continue
+                answer = element.find_element_by_class_name("qpAvatarAnswerText").text
+                if correct:
+                    player.correct_songs.append([song, answer])
+                else:
+                    player.wrong_songs.append([song, answer])
+                if "disabled" in element.get_attribute("class"):
+                    self.remove_player(name, "Left the game")
+                player.score = score
+
+    def get_player(self, name):
+        for p in self.players:
+            if p.name == name and p.note == "":
+                return p
+        return None
+
     def verify_players(self):
         actual_players = []
         for p in self.players:
