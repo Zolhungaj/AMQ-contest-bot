@@ -20,9 +20,9 @@ class GameLobby(Lobby):
             if p.note == "":
                 self.player_count += 1
         if self.player_max > 8:
-            self.scan_lobby = scan_lobby_many
+            self.scan_lobby = self.scan_lobby_many
         else:
-            self.scan_lobby = scan_lobby_few
+            self.scan_lobby = self.scan_lobby_few
         self.time = -1
         self.song_list = []
         self.driver = driver
@@ -161,16 +161,22 @@ class GameLobby(Lobby):
 
     def get_player(self, name):
         for p in self.players:
-            if p.name == name and p.note == "":
+            if p.username == name and p.note == "":
                 return p
         return None
 
     def verify_players(self):
         actual_players = []
+        name_list = []
+        containers = self.driver.find_elements_by_class_name("qpAvatarContainer")
+        for element in containers:
+            name_container = element.find_element_by_class_name("qpAvatarNameContainer")
+            name = name_container.find_element_by_tag_name("span").text
+            name_list.append(name)
         for p in self.players:
             try:
-                self.driver.find_element_by_id("qpAvatar-%s" % p.username)
-                actual_players.append(p)
+                if p.username in name_list:
+                    actual_players.append(p)
             except Exception:
                 pass
         self.players = actual_players
@@ -201,9 +207,9 @@ class WaitingLobby(Lobby):
         self.player_max = player_max
         self.player_count = len([p for p in self.players if p is not None])
         if self.player_max > 8:
-            self.scan_lobby = scan_lobby_many
+            self.scan_lobby = self.scan_lobby_many
         else:
-            self.scan_lobby = scan_lobby_few
+            self.scan_lobby = self.scan_lobby_few
 
     def scan_lobby_few(self):
         for n in range(self.player_max):
@@ -237,21 +243,24 @@ class WaitingLobby(Lobby):
         ready_players = []
         containers = self.driver.find_elements_by_class_name("lobbyAvatar")
         for element in containers:
-            name_container = element.find_element_by_class_name("lobbyAvatarNameContainterInner")
-            name = name_container.find_element_by_tag_name("h2").text
-            level_container = element.find_element_by_class_name("lobbyAvatarLevelContainer")
-            level = int(level_container.find_element_by_tag_name("h3").text)
-            ready = "lbready" in element.get_attribute("class")
-            players.append(Player(name, level))
-            ready_players.append(ready)
+            try:
+                name_container = element.find_element_by_class_name("lobbyAvatarNameContainerInner")
+                name = name_container.find_element_by_tag_name("h2").text
+                level_container = element.find_element_by_class_name("lobbyAvatarLevelContainer")
+                level = int(level_container.find_element_by_tag_name("h3").text)
+                ready = "lbReady" in element.get_attribute("class")
+                players.append(Player(name, level))
+                ready_players.append(ready)
+            except Exception:
+                pass
         self.players = players
         self.ready_players = ready_players
         self.player_count = len(players)
 
     def get_unready(self):
         not_ready = []
-        for n in range(self.player_max):
-            if self.players[n] is not None and not self.ready_players[n]:
+        for n in range(len(self.players)):
+            if not self.ready_players[n]:
                 not_ready.append(self.players[n])
         return not_ready
 

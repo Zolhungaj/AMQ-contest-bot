@@ -165,6 +165,9 @@ class Game:
         login_button = driver.find_element_by_id("loginButton")
         login_button.click()
         time.sleep(self.delay)
+        driver.execute_script(""" document.getElementById("mpNewsContainer").innerHTML = '<button id="myfunnyvalentine" onclick="expandLibrary.lobby = lobby">Click me!</button>' """)
+        ActionChains(driver).move_to_element(driver.find_element_by_id("myfunnyvalentine")).click().perform()
+        driver.execute_script(""" document.getElementById("mpNewsContainer").innerHTML = '' """)
         play = driver.find_element_by_id("mpPlayButton")
         play.click()
         time.sleep(self.delay)
@@ -203,7 +206,7 @@ class Game:
         start_room = driver.find_element_by_id("mhHostButton")
         start_room.click()
         time.sleep(self.delay)
-        driver.execute_script("lobby.changeToSpectator(selfName);")
+        driver.execute_script("expandLibrary.lobby.changeToSpectator(selfName);")
         self.max_chat_message_length = driver.execute_script("return gameChat.MAX_MESSAGE_LENGTH")
 
     def run(self):
@@ -299,7 +302,7 @@ class Game:
                 self.chat(str(int(time_remaining)))
 
     def start_game(self):
-        self.driver.execute_script("lobby.fireMainButtonEvent(true);")
+        self.driver.execute_script("expandLibrary.lobby.fireMainButtonEvent(true);")
         time.sleep(self.delay)
         try:
             pop_up = self.driver.find_element_by_class_name("swal2-container")
@@ -334,11 +337,11 @@ class Game:
             return
         if self.lobby.round > self.last_round:
             self.last_round = self.lobby.round
-            self.driver.execute_script('skipController.toggle()')
+            #self.driver.execute_script('skipController.toggle()')
             self.skipped_playback = False
         if self.lobby.playback and not self.skipped_playback:
             self.skipped_playback = True
-            self.driver.execute_script('skipController.toggle()')
+            #self.driver.execute_script('skipController.toggle()')
             if random.random() < self.chattiness:
                 self.auto_chat("answer_reveal", [self.lobby.last_song.anime])
             # for p in self.lobby.players:
@@ -398,7 +401,7 @@ class Game:
         self.auto_chat("abort_game")
         self.driver.execute_script('quiz.startReturnLobbyVote();')
         time.sleep(1)
-        self.driver.execute_script('skipController.toggle()')
+        #self.driver.execute_script('skipController.toggle()')
         time.sleep(1)
         self.state = 4
 
@@ -498,7 +501,7 @@ class Game:
             self.tick()
 
     def move_to_spectator(self, username):
-        self.driver.execute_script('lobby.changeToSpectator("%s")' % username)
+        self.driver.execute_script('expandLibrary.lobby.changeToSpectator("%s")' % username)
 
     def mute_sound(self):
         try:
@@ -727,7 +730,7 @@ class Game:
                 if self.state < 3:
                     self.lobby.remove_player(username, reason)
                     self.driver.execute_script(
-                        'lobby.kickPlayer("%s")' % username)
+                        'expandLibrary.lobby.kickPlayer("%s")' % username)
                     self.handle_popup()
                     self.auto_chat("kick_chat", [username, reason])
                     self.message_player(username,
@@ -753,7 +756,7 @@ class Game:
         if self.state < 3:
             player_list = [player.username.lower() for player in self.lobby.all_players()]
             if username.lower() in spectator_list or username.lower() in player_list:
-                self.driver.execute_script('lobby.kickPlayer("%s")' % username)
+                self.driver.execute_script('expandLibrary.lobby.kickPlayer("%s")' % username)
                 self.handle_popup()
         elif username.lower() in spectator_list:
             self.driver.execute_script(
