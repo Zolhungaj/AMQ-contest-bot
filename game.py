@@ -89,7 +89,7 @@ class Game:
         self.log = Logger()
         self.chat_pos = 0
         self.lobby = None
-        self.max_players = 8
+        self.max_players = 40
         self.last_round = -1
         self.skipped_playback = False
         self.kick_list = []
@@ -185,6 +185,9 @@ class Game:
             "swal2-confirm")
         load_confirm.click()
         time.sleep(self.delay)
+        driver.find_element_by_id("mhRoomSizeAdvancedText").send_keys(Keys.BACKSPACE)
+        driver.find_element_by_id("mhRoomSizeAdvancedText").send_keys(Keys.BACKSPACE)
+        driver.find_element_by_id("mhRoomSizeAdvancedText").send_keys("40")
         if room_password != "":
             private_button = driver.find_element_by_id("mhPrivateRoom")
             box = driver.find_element_by_class_name("customCheckbox")
