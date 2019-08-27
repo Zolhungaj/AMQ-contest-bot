@@ -9,15 +9,20 @@ class Lobby:
 
 class GameLobby(Lobby):
     """represents the lobby"""
-    def __init__(self, driver, players=[], round=0):
+    def __init__(self, driver, players=[], round=0, player_max=8):
         self.round = round
         self.total_rounds = -1
         self.last_round = round - 1
         self.players = [p for p in players if p is not None]
         self.player_count = 0
+        self.player_max = player_max
         for p in self.players:
             if p.note == "":
                 self.player_count += 1
+        if self.player_max > 8:
+            self.scan_lobby = scan_lobby_many
+        else:
+            self.scan_lobby = scan_lobby_few
         self.time = -1
         self.song_list = []
         self.driver = driver
@@ -36,7 +41,7 @@ class GameLobby(Lobby):
         self.players.append(Player(username))
         player_count += 1
 
-    def scan_lobby(self):
+    def scan_lobby_few(self):
         hider = self.driver.find_element_by_id("qpAnimeNameHider")
         if "hide" not in hider.get_attribute("class"):
             playround = True
@@ -195,8 +200,12 @@ class WaitingLobby(Lobby):
         self.ready_players = [False]*player_max
         self.player_max = player_max
         self.player_count = len([p for p in self.players if p is not None])
+        if self.player_max > 8:
+            self.scan_lobby = scan_lobby_many
+        else:
+            self.scan_lobby = scan_lobby_few
 
-    def scan_lobby(self):
+    def scan_lobby_few(self):
         for n in range(self.player_max):
             element = self.driver.find_element_by_id("lobbyAvatar%d" % n)
             is_player = element.find_element_by_class_name("lobbyAvatarTextContainer")
@@ -250,7 +259,7 @@ class WaitingLobby(Lobby):
         return self.get_unready() == []
 
     def generateGameLobby(self):
-        return GameLobby(self.driver, self.players)
+        return GameLobby(self.driver, self.players, player_max=self.player_max)
 
     def player_count_fun(self):
         res = 0
