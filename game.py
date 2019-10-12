@@ -583,10 +583,11 @@ class Game:
             if self.chat_pos > 50:
                 self.clear_chat()
             # print(chat_window.text)
-
+            gcMessageFix = re.compile('<span class="gcMessage">(.*)</span>')
             for match in chat_messages[chat_pos:]:
                 self.true_log_chat(match)
                 player_message = self.player_message_pattern.search(match)
+
                 join_as_player = None
                 join_as_spectator = None
                 spectator_to_player = None
@@ -602,6 +603,7 @@ class Game:
                     num = 1
                     while num == 1:
                         message, num = self.detect_emoji.subn(r"<\g<1>>", message, 1)
+                    message = gcMessageFix.search(message).group(1)
                     self.log.chat("%s said: \"%s\"" % (name, message))
                     self.database.save_message(name, message)
                     match = self.detect_command.match(message)
