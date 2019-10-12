@@ -133,7 +133,8 @@ class GameLobby(Lobby):
             containers = self.driver.find_elements_by_class_name("qpAvatarContainer")
             for element in containers:
                 answer_container = element.find_element_by_class_name("qpAvatarAnswerContainer")
-                for i in range(5):
+                correct = True
+                for i in range(10):
                     if "rightAnswer" in answer_container.get_attribute("class"):
                         correct = True
                     elif "wrongAnswer" in answer_container.get_attribute("class"):
